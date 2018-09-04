@@ -21,6 +21,9 @@ public:
 		int width, int height,
 		int BytePerSample);
 
+	/* R8 G8 B8 R8 G8 B8 ......  */
+	int renderRGB(unsigned char *pRGB, int width, int height);
+
 	int clean();
 
 	void ChangehWnd(HWND hWnd);
@@ -85,6 +88,12 @@ private:
 	BOOL process_8bit_rgbRender(unsigned char* py,
 		unsigned char* pu,
 		unsigned char* pv,
+		unsigned char* pDest,
+		int Pitch,
+		int width,
+		int height);
+
+	BOOL processR8G8B8Render(unsigned char* pRGB,
 		unsigned char* pDest,
 		int Pitch,
 		int width,

@@ -128,35 +128,49 @@ int D3DOffscreenRender::clean()
 }
 int D3DOffscreenRender::reinitDirect3D()
 {
-	if (m_BytePerSample <= 1)
+	if (m_d3dformat == D3DFMT_R8G8B8)
 	{
-		m_d3dformat = m_8bit_d3dformat;
-		PRINT("D3DOffscreenRender::render BytePerSample = 1 £¬ initDirect3D D3DFMT_A8R8G8B8!\n");
+		PRINT("D3DOffscreenRender::render initDirect3D D3DFMT_R8G8B8!\n");
 		int iret = initDirect3D(m_d3dformat);
 		if (iret < 0)
 		{
-			PRINT("D3DOffscreenRender::render initDirect3D D3DFMT_A8R8G8B8 failed!\n");
+			PRINT("D3DOffscreenRender::render initDirect3D D3DFMT_R8G8B8 failed!\n");
 			return -1;
 		}
 	}
 	else
 	{
-		m_d3dformat = D3DFMT_A2R10G10B10;
-		PRINT("D3DOffscreenRender::render initDirect3D D3DFMT_A2R10G10B10!\n");
-		int iret = initDirect3D(m_d3dformat);
-		if (iret < 0)
+		if (m_BytePerSample <= 1)
 		{
-			m_b10bitSupport = false;
-			PRINT("D3DOffscreenRender::render initDirect3D D3DFMT_A2R10G10B10 failed!\n");
 			m_d3dformat = m_8bit_d3dformat;
-			PRINT("D3DOffscreenRender::render initDirect3D D3DFMT_A8R8G8B8!\n");
-			iret = initDirect3D(m_d3dformat);
+			PRINT("D3DOffscreenRender::render BytePerSample = 1 £¬ initDirect3D D3DFMT_A8R8G8B8!\n");
+			int iret = initDirect3D(m_d3dformat);
 			if (iret < 0)
 			{
 				PRINT("D3DOffscreenRender::render initDirect3D D3DFMT_A8R8G8B8 failed!\n");
 				return -1;
 			}
 		}
+		else
+		{
+			m_d3dformat = D3DFMT_A2R10G10B10;
+			PRINT("D3DOffscreenRender::render initDirect3D D3DFMT_A2R10G10B10!\n");
+			int iret = initDirect3D(m_d3dformat);
+			if (iret < 0)
+			{
+				m_b10bitSupport = false;
+				PRINT("D3DOffscreenRender::render initDirect3D D3DFMT_A2R10G10B10 failed!\n");
+				m_d3dformat = m_8bit_d3dformat;
+				PRINT("D3DOffscreenRender::render initDirect3D D3DFMT_A8R8G8B8!\n");
+				iret = initDirect3D(m_d3dformat);
+				if (iret < 0)
+				{
+					PRINT("D3DOffscreenRender::render initDirect3D D3DFMT_A8R8G8B8 failed!\n");
+					return -1;
+				}
+			}
+		}
+
 	}
 
 	return 0;
@@ -175,6 +189,10 @@ int D3DOffscreenRender::initDirect3D(D3DFORMAT _format)
 	if (m_d3dformat == D3DFMT_A8R8G8B8)
 	{
 		PRINT("initDirect3D D3DFMT_A8R8G8B8!\n");
+	}
+	else if (m_d3dformat == D3DFMT_R8G8B8)
+	{
+		PRINT("initDirect3D D3DFMT_R8G8B8!\n");
 	}
 	else if (m_d3dformat == D3DFMT_A2R10G10B10)
 	{
@@ -273,6 +291,10 @@ int D3DOffscreenRender::initDirect3D(D3DFORMAT _format)
 	{
 		PRINT("initDirect3D D3DFMT_A8R8G8B8 success!\n");
 	}
+	else if (m_d3dformat == D3DFMT_R8G8B8)
+	{
+		PRINT("initDirect3D D3DFMT_R8G8B8 success!\n");
+	}
 	else if (m_d3dformat == D3DFMT_A2R10G10B10)
 	{
 		PRINT("initDirect3D D3DFMT_A2R10G10B10 success!\n");
@@ -327,6 +349,121 @@ HRESULT D3DOffscreenRender::destroyDirect3D()
 	return S_OK;
 }
 
+int D3DOffscreenRender::renderRGB(unsigned char *pRGB, int width, int height)
+{
+	if (width <= 0 || height <= 0 || m_hWnd == NULL)
+	{
+		return -1;
+	}
+	if (NULL == MonitorFromWindow(m_hWnd, MONITOR_DEFAULTTONULL))
+		return 0;
+
+	RECT window_rect;
+	memset(&window_rect, 0, sizeof(window_rect));
+	GetWindowRect(m_hWnd, &window_rect);
+
+	if (window_rect.left == window_rect.right ||
+		window_rect.top == window_rect.bottom)
+	{
+		return 0;
+	}
+
+	RECT client_rect;
+	BOOL bret = GetClientRect(m_hWnd, &client_rect);
+
+	if (m_pDirect3D9 == NULL || 
+		m_pDirect3DDevice == NULL || 
+		m_pDirect3DSurfaceRender == NULL)
+	{
+		m_width = width;
+		m_height = height;
+		m_screenWidth = m_screenHeight = 0;
+
+		int iret = reinitDirect3D();
+		if (iret < 0) return iret;
+
+	}
+
+	if (m_rtViewport.right != client_rect.right ||
+		m_rtViewport.bottom != client_rect.bottom ||
+		((width * height) != (m_width * m_height)) ||
+		m_d3dformat != D3DFMT_A8R8G8B8)
+	{
+		m_rtViewport.left = client_rect.left;
+		m_rtViewport.right = client_rect.right;
+		m_rtViewport.top = client_rect.top;
+		m_rtViewport.bottom = client_rect.bottom;
+		m_width = width;
+		m_height = height;
+		m_d3dformat = D3DFMT_A8R8G8B8;
+		m_BytePerSample = 1;
+
+		int iret = reinitDirect3D();
+		if (iret < 0) 
+			return iret;
+	}
+	HRESULT lRet;
+
+	if (m_pDirect3DSurfaceRender == NULL)
+		return -1;
+	D3DLOCKED_RECT d3d_rect;
+
+	lRet = m_pDirect3DSurfaceRender->LockRect(&d3d_rect, NULL, D3DLOCK_DONOTWAIT);
+	if (FAILED(lRet))
+	{
+		return -1;
+	}
+
+	if (m_8bit_d3dformat == D3DFMT_A8R8G8B8)
+	{
+		BOOL iret = processR8G8B8Render(pRGB, (unsigned char*)(d3d_rect.pBits), d3d_rect.Pitch, width, height);
+		if (!iret)
+		{
+			m_pDirect3DSurfaceRender->UnlockRect();
+			PRINT("D3DOffscreenRender::process_8bit_rgbRender failed!\n");
+			return -1;
+		}
+	}
+
+
+	lRet = m_pDirect3DSurfaceRender->UnlockRect();
+	if (FAILED(lRet))
+	{
+		PRINT("D3DOffscreenRender::UnlockRect failed!\n");
+		return -1;
+	}
+
+	if (m_pDirect3DDevice == NULL)
+		return -1;
+
+	m_pDirect3DDevice->Clear(0, NULL, D3DCLEAR_TARGET, D3DCOLOR_XRGB(0, 0, 0), 1.0f, 0);
+	m_pDirect3DDevice->BeginScene();
+
+	IDirect3DSurface9 * pBackBuffer = NULL;
+	if (SUCCEEDED(m_pDirect3DDevice->GetBackBuffer(0, 0, D3DBACKBUFFER_TYPE_MONO, &pBackBuffer)))
+	{
+		m_pDirect3DDevice->StretchRect(m_pDirect3DSurfaceRender, NULL, pBackBuffer, &m_rtViewport, D3DTEXF_LINEAR);
+		pBackBuffer->Release();
+	}
+
+	m_pDirect3DDevice->EndScene();
+	HRESULT hr = m_pDirect3DDevice->Present(NULL, NULL, NULL, NULL);
+
+	int iret = 0;
+
+	if (hr == D3DERR_DEVICELOST)
+	{
+		if (m_pDirect3DDevice->TestCooperativeLevel() == D3DERR_DEVICENOTRESET)
+		{
+			D3DPRESENT_PARAMETERS d3dpp;
+			m_pDirect3DDevice->Reset(&d3dpp);
+			iret = initDirect3D(m_d3dformat);
+		}
+	}
+
+	return iret;
+
+}
 
 int D3DOffscreenRender::render(unsigned char *py, unsigned char *pu, unsigned char *pv,
 	int width, int height, int BytePerSample)
@@ -630,6 +767,69 @@ BOOL D3DOffscreenRender::process_10bit_rgbRender(unsigned char* py,
 	return true;
 }
 
+BOOL D3DOffscreenRender::processR8G8B8Render(unsigned char* pRGB,
+	unsigned char* pDest,
+	int Pitch,
+	int width,
+	int height)
+{
+	if (m_width != width || m_height != height)
+	{
+		m_width = width;
+		m_height = height;
+
+		if (m_pRgb8_buffer)
+		{
+			free(m_pRgb8_buffer);
+			m_pRgb8_buffer = NULL;
+		}
+	}
+
+	if (!m_pRgb8_buffer)
+	{
+		m_pRgb8_buffer = (unsigned char*)calloc(1, width * height * 4);
+		if (!m_pRgb8_buffer)
+		{
+			return false;
+		}
+	}
+	if (pRGB != NULL)
+	{
+		unsigned char *pSrcTmp = pRGB;
+		unsigned char *pSrcDest = m_pRgb8_buffer;
+
+		for (int i = 0; i < width * height; i++)
+		{
+			//pSrcDest[0] = 0;
+			//memcpy(pSrcDest + 1, pSrcTmp, 3);
+			pSrcDest[3] = 0;
+			pSrcDest[2] = pSrcTmp[0];
+			pSrcDest[1] = pSrcTmp[1];
+			pSrcDest[0] = pSrcTmp[2];
+
+			pSrcDest += 4;
+			pSrcTmp += 3;
+		}
+	}
+
+	unsigned char* tmprgb = m_pRgb8_buffer;
+	unsigned char* tmpdst = pDest;
+	if (width * 4 == Pitch)
+	{
+		memcpy(tmpdst, tmprgb, width *height * 4);
+	}
+	else
+	{
+		for (int i = 0; i < height; i++)
+		{
+			memcpy(tmpdst, tmprgb, width * 4);
+			tmprgb += width * 4;
+			tmpdst += Pitch;
+		}
+	}
+	return true;
+
+}
 
 BOOL D3DOffscreenRender::process_8bit_rgbRender(unsigned char* py,
 	unsigned char* pu,

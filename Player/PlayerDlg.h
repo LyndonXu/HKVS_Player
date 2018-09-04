@@ -4,6 +4,7 @@
 
 #pragma once
 #include "GetSysInfo.h"
+#include "PlayCtrl.h"
 
 // CPlayerDlg ¶Ô»°¿ò
 class CPlayerDlg : public CDialogEx
@@ -45,6 +46,7 @@ private:
 	CStatusBar m_csStatusBar;
 
 	CGetSysInfo m_csSysInfo;
+	CPlayCtrl m_csPlayCtrl;
 public:
 	virtual BOOL DestroyWindow();
 	afx_msg void OnTimer(UINT_PTR nIDEvent);

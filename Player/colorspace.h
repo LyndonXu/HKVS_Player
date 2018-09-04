@@ -557,7 +557,7 @@ inline void yuv2rgb8_sse2(unsigned char* py, unsigned char* pu, unsigned char* p
 				pop eax
 		}
 #else
-		TCHAR sz[MAX_PATH];
+		//TCHAR sz[MAX_PATH];
 		//wsprintf(sz, TEXT("!!!!!!!!!!!!11this = %lx\n"), this);
 		//OutputDebugString(sz);
 

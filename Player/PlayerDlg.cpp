@@ -9,8 +9,6 @@
 
 
 #include "utils.h"
-#include "GetSysInfo.h"
-
 
 
 // 用于应用程序“关于”菜单项的 CAboutDlg 对话框
@@ -144,8 +142,10 @@ BOOL CPlayerDlg::OnInitDialog()
 	TRACE(L"G:\\GBServer size is:%lld\n", s64Size);
 
 	SetTimer(1, 1000, NULL);
+	SetTimer(2, 15, NULL);
 
 	SetWindowText(L"1231312");
+	m_csPlayCtrl.BeginRender(GetDlgItem(IDC_STATIC_Movie)->GetSafeHwnd());
 
 	return TRUE;  // 除非将焦点设置到控件，否则返回 TRUE
 }
@@ -206,6 +206,7 @@ BOOL CPlayerDlg::DestroyWindow()
 	// TODO: 在此添加专用代码和/或调用基类
 
 	KillTimer(1);
+	KillTimer(2);
 
 	return CDialogEx::DestroyWindow();
 }
@@ -242,6 +243,24 @@ void CPlayerDlg::OnTimer(UINT_PTR nIDEvent)
 		csStr.Format(L"网络: 接收%dKbps, 发送%dKbps", u32InSpeed / 1024, u32OutSpeed / 1024);
 		m_csStatusBar.SetPaneText(_StatusBar_NetInterface, csStr, TRUE);
 	}
+	if (nIDEvent == 2)
+	{
+		for (INT  i = 0; i < 3; i++)
+		{
+			static UINT32 u32Cnt = 0;
+			static unsigned char u8Buf[800 * 600 * 3];
+			unsigned char *pTmp = u8Buf;
+			for (int32_t j = 0; j < 800 * 600; j++, pTmp += 3)
+			{
+				pTmp[0] = 0;
+				pTmp[1] = 0;
+				pTmp[2] = u32Cnt;
+			}
+			u32Cnt++;
+			m_csPlayCtrl.SendShareData(u8Buf, 800 * 600 * 3);
+		}
+	}
+
 
 	CDialogEx::OnTimer(nIDEvent);
 }
