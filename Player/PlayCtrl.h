@@ -54,10 +54,11 @@ public:
 		int32_t s32RefCount, PFUN_ShareMemReleaseCB pFunCB);
 	int32_t CreateShareMem(HANDLE hMutex, StParamV *pParam, uint32_t u32Count,
 		int32_t s32RefCount, PFUN_ShareMemReleaseCB pFunCB);
+	int32_t GetShareMem(void *&pData, uint32_t &u32Length, bool boLockData = false);
 
+private:
 	int32_t ReleaseShareMem();
 
-	int32_t GetShareMem(void *&pData, uint32_t &u32Length, bool boLockData = false);
 private:
 	char *m_pData;
 	uint32_t m_u32DataLenth;
