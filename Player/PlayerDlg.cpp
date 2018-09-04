@@ -142,10 +142,20 @@ BOOL CPlayerDlg::OnInitDialog()
 	TRACE(L"G:\\GBServer size is:%lld\n", s64Size);
 
 	SetTimer(1, 1000, NULL);
-	SetTimer(2, 15, NULL);
+	SetTimer(2, 40, NULL);
 
 	SetWindowText(L"1231312");
 	m_csPlayCtrl.BeginRender(GetDlgItem(IDC_STATIC_Movie)->GetSafeHwnd());
+	m_csPlayCtrl.BeginSave();
+
+	{
+		UINT32 u32Size = sizeof(StFrameHeader);
+		u32Size = u32Size;
+		StFrameHeader stHeader = { 1, 2, 3, 4, 5, 6, 7 };
+		int32_t s32Ret = GetFrameHeaderCheckSum(&stHeader);
+		s32Ret = GetFrameHeaderCheckSum(&stHeader, true);
+		s32Ret = s32Ret;
+	}
 
 	return TRUE;  // 除非将焦点设置到控件，否则返回 TRUE
 }
