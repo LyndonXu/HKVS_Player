@@ -185,12 +185,6 @@ CPlayCtrl::~CPlayCtrl()
 	}
 }
 
-enum 
-{
-	_Render_Play,
-	_Render_Pause,
-	_Render_Stop,
-};
 #if 0
 unsigned char u8Buf[800 * 600 * 3];
 #endif
@@ -204,7 +198,7 @@ uint32_t CPlayCtrl::RenderThread()
 	uint64_t u64NextRenderTime = 0;
 	uint64_t u64BaseRenderTime = 0;
 
-	uint32_t u32RenderMode = _Render_Play;
+	uint32_t u32RenderMode = _PlayMode_Play;
 
 	uint32_t u32Tmp = 0;
 
@@ -253,7 +247,7 @@ uint32_t CPlayCtrl::RenderThread()
 			{
 				m_csRender.renderRGB(NULL, 0, 0);
 			}
-			PRINT("render %d's frame %lld\n", u32Tmp, u64CurTime);
+			//PRINT("render %d's frame %lld\n", u32Tmp, u64CurTime);
 			u64FrameCnt++;
 			u64NextRenderTime = u64BaseRenderTime + u64FrameCnt * 1000 / m_u32RenderFPS;
 		}
@@ -499,11 +493,62 @@ int32_t CPlayCtrl::BeginLocalPlay(const TCHAR *pFileName)
 		return -1;
 	}
 
+	m_boIsLocalPlayThreadExit = false;
+
+	m_hSemForLocalPlayThread = CreateSemaphore(NULL, 0, 20, NULL);
+	if (m_hSemForLocalPlayThread == NULL)
+	{
+		return -1;
+	}
+
+
+	m_hLocalPlayThread = (HANDLE)_beginthreadex(NULL, 0, ::LocalPlayThread,
+		this, 0, &m_u32LocalPlayThreadID);
+
+	if (m_hLocalPlayThread == NULL)
+	{
+		StopLocalPlay();
+		return -1;
+	}
+	return 0;
+}
+
+int32_t  CPlayCtrl::SendFileDataToRender(CLocalPlayIndexIter iter)
+{
+	uint32_t u32Length = iter->u32RawDataLength +
+		sizeof(StFrameHeader) + sizeof(uint32_t);
+	void *pData = malloc(u32Length);
+	if (pData != NULL)
+	{
+		LARGE_INTEGER stLarge;
+		DWORD dwReadLen = 0;
+
+		stLarge.QuadPart = iter->u64FilePos;
+		SetFilePointer(m_hLocalFile, stLarge.LowPart, &(stLarge.HighPart), FILE_BEGIN);
+
+		ReadFile(m_hLocalFile, pData, u32Length, &dwReadLen, NULL);
+		if (u32Length != dwReadLen)
+		{
+			free(pData);
+		}
+		SendShareData(pData, u32Length);
+		free(pData);
+	}
+	return 0;
+}
+
+uint32_t CPlayCtrl::LocalPlayThread()
+{
+	MSG stMsg = { 0 };
+	/* creat a message queue */
+	PeekMessage(&stMsg, NULL, 0, 0, PM_NOREMOVE);
+
+
 	uint64_t u64ReadPos = 0;
 	uint32_t u32Index = 0;
-	while (true)
+	while (!m_boIsLocalPlayThreadExit)
 	{
-		StLocalPlayIndex stIndex = {0};
+		StLocalPlayIndex stIndex = { 0 };
 		uint32_t u32DataLength = 0;
 
 		stIndex.u64FilePos = u64ReadPos;
@@ -539,7 +584,7 @@ int32_t CPlayCtrl::BeginLocalPlay(const TCHAR *pFileName)
 		{
 			break;
 		}
-		
+
 
 		u64ReadPos += dwReadLen;
 
@@ -554,46 +599,150 @@ int32_t CPlayCtrl::BeginLocalPlay(const TCHAR *pFileName)
 
 	if (m_csLocalPlayIndex.size() == 0)
 	{
+		/* Send message to the windows */
+
+		if (m_hLocalFile != NULL)
+		{
+			CloseHandle(m_hLocalFile);
+			m_hLocalFile = NULL;
+		}
 		return -1;
 	}
 
-
-
-	m_boIsLocalPlayThreadExit = false;
-
-	m_hSemForLocalPlayThread = CreateSemaphore(NULL, 0, 20, NULL);
-	if (m_hSemForLocalPlayThread == NULL)
+	uint64_t u64ContinusTime = 0;
+	CLocalPlayIndexIter iter = m_csLocalPlayIndex.begin();
 	{
-		return -1;
+		uint64_t u64BeginTime = iter->stHeader.u32TimeStampHigh;
+		u64BeginTime = (u64BeginTime << 32) + iter->stHeader.u32TimeStampLow;
+
+		CLocalPlayIndexRIter rIter = m_csLocalPlayIndex.rbegin();
+		uint64_t u64EndTime = rIter->stHeader.u32TimeStampHigh;
+		u64EndTime = (u64EndTime << 32) + rIter->stHeader.u32TimeStampLow;
+
+		u64ContinusTime = u64EndTime - u64BeginTime;
 	}
 
 
-	m_hLocalPlayThread = (HANDLE)_beginthreadex(NULL, 0, ::LocalPlayThread,
-		this, 0, &m_u32LocalPlayThreadID);
+	double d64RealFPS = (double)(m_csLocalPlayIndex.size());
+	d64RealFPS  = d64RealFPS * 1000 / u64ContinusTime;
 
-	if (m_hLocalPlayThread == NULL)
-	{
-		StopLocalPlay();
-		return -1;
-	}
-	return 0;
-}
-uint32_t CPlayCtrl::LocalPlayThread()
-{
-	MSG stMsg = { 0 };
-	/* creat a message queue */
-	PeekMessage(&stMsg, NULL, 0, 0, PM_NOREMOVE);
-
+	double d64PlayFPSRate = 1.0 / 30.0;//30.0 / d64RealFPS;
 
 	CShareMemCtrl *pCtrl = NULL;
-	uint64_t u64BeginTime = 0;
+
+	uint64_t u64NextReadTime = 0;
+	uint64_t u64BaseReadTime = 0; 
+	uint64_t u64FrameCnt = 0;
+	uint32_t u32BaseFrameIndex = 0;
+
+	u64NextReadTime = u64BaseReadTime = timeGetTime();
+
+	uint32_t u32PlayMode = _PlayMode_Play;
 
 	while (!m_boIsLocalPlayThreadExit)
 	{
+		uint64_t u64CurTime = timeGetTime();
+		if (u64CurTime >= u64NextReadTime)
+		{
+			if (u32PlayMode == _PlayMode_Play)
+			{
+				if (iter != m_csLocalPlayIndex.end())
+				{
+					double d64TimeDiffFromBase = (double)(u64NextReadTime - u64BaseReadTime);
+					uint32_t u32NextFrame = u32BaseFrameIndex + (uint32_t)(d64TimeDiffFromBase * d64RealFPS * d64PlayFPSRate / 1000.0 + 0.5);
+					PRINT("u32NextFrame %d\n", u32NextFrame);
+					if (u32NextFrame > iter->u32Index || u64NextReadTime == u64BaseReadTime)
+					{
+						for (uint32_t i = iter->u32Index; i < u32NextFrame; i++)
+						{
+							iter++;
+							if (iter == m_csLocalPlayIndex.end())
+							{
+								break;
+							}
+						}
+						if (iter != m_csLocalPlayIndex.end())
+						{
+							SendFileDataToRender(iter);
+						}
+					}
+				}
+
+				u64FrameCnt++;
+				u64NextReadTime = u64BaseReadTime + u64FrameCnt * 1000 / m_u32RenderFPS;
+			}
+			else if (u32PlayMode == _PlayMode_Pause)
+			{
+
+			}
+		}
+
 		WaitForSingleObject(m_hSemForLocalPlayThread, 10);
 
 		while (PeekMessage(&stMsg, NULL, 0, 0, PM_REMOVE))
 		{
+			switch (stMsg.message)
+			{
+				case _LocalPlay_Msg_Play:
+				{
+					if (u32PlayMode != _LocalPlay_Msg_Play)
+					{
+						if (iter == m_csLocalPlayIndex.end())
+						{
+							CLocalPlayIndexRIter rIter = m_csLocalPlayIndex.rbegin();
+							u32BaseFrameIndex = rIter->u32Index;
+						}
+						else
+						{
+							u32BaseFrameIndex = iter->u32Index;
+						}
+						u64NextReadTime = u64BaseReadTime = timeGetTime();
+						u64FrameCnt = 0;
+
+						u32PlayMode = _LocalPlay_Msg_Play;
+					}
+
+
+					break;
+				}
+				case _LocalPlay_Msg_Pause:
+				{
+					u32PlayMode = _LocalPlay_Msg_Pause;
+					break;
+				}
+				case _LocalPlay_Msg_NextFrame:
+				{
+					if (iter != m_csLocalPlayIndex.end())
+					{
+						iter++;
+						if (iter != m_csLocalPlayIndex.end())
+						{
+							PRINT("Next Frame: %d\n", iter->u32Index);
+							SendFileDataToRender(iter);
+						}
+					}
+					u32PlayMode = _LocalPlay_Msg_Pause;
+					break;
+				}
+				case _LocalPlay_Msg_PrevFrame:
+				{
+					if (iter != m_csLocalPlayIndex.begin())
+					{
+						iter--;
+						PRINT("Prev Frame: %d\n", iter->u32Index);
+						SendFileDataToRender(iter);
+					}
+					u32PlayMode = _LocalPlay_Msg_Pause;
+					break;
+				}
+				case _LocalPlay_Msg_ChangeRate:
+				{
+					d64PlayFPSRate = (double)stMsg.wParam;
+					break;
+				}
+				default:
+					break;
+			}
 		}
 	}
 
@@ -709,6 +858,25 @@ int32_t CPlayCtrl::SendSaveMessage(uint32_t u32MsgType, void *pData, uint32_t u3
 
 	return 0;
 }
+
+int32_t CPlayCtrl::SendLocalPlayMessage(uint32_t u32MsgType, void *pData, uint32_t u32Length)
+{
+	if (m_u32LocalPlayThreadID == ~0)
+	{
+		return -1;
+	}
+	if (u32MsgType < _LocalPlay_Msg_Reserved)
+	{
+		if (!PostThreadMessage(m_u32LocalPlayThreadID, u32MsgType, (WPARAM)pData, (LPARAM)u32Length))
+		{
+			return -1;
+		}
+		ReleaseSemaphore(m_hSemForLocalPlayThread, 1, NULL);
+	}
+
+	return 0;
+}
+
 
 int32_t CPlayCtrl::SendShareData(StParamV *pParam, uint32_t u32Count,
 	uint32_t u32ShareFlag/* = SHARE_DATA_RENDER*/)

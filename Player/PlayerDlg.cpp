@@ -64,6 +64,9 @@ BEGIN_MESSAGE_MAP(CPlayerDlg, CDialogEx)
 	ON_WM_PAINT()
 	ON_WM_QUERYDRAGICON()
 	ON_WM_TIMER()
+	ON_BN_CLICKED(IDC_BTN_NextFrame, &CPlayerDlg::OnBnClickedBtnNextframe)
+	ON_BN_CLICKED(IDC_BTN_PlayPause, &CPlayerDlg::OnBnClickedBtnPlaypause)
+	ON_BN_CLICKED(IDC_BTN_PrevFrame, &CPlayerDlg::OnBnClickedBtnPrevframe)
 END_MESSAGE_MAP()
 
 
@@ -142,7 +145,7 @@ BOOL CPlayerDlg::OnInitDialog()
 	TRACE(L"G:\\GBServer size is:%lld\n", s64Size);
 
 	SetTimer(1, 1000, NULL);
-	//SetTimer(2, 15, NULL);
+	//SetTimer(2, 40, NULL);
 
 	SetWindowText(L"1231312");
 	m_csPlayCtrl.BeginRender(GetDlgItem(IDC_STATIC_Movie)->GetSafeHwnd());
@@ -223,8 +226,8 @@ BOOL CPlayerDlg::DestroyWindow()
 }
 
 
-#define WIDTH	480
-#define HEIGHT	320
+#define WIDTH	672	
+#define HEIGHT	512
 
 void CPlayerDlg::OnTimer(UINT_PTR nIDEvent)
 {
@@ -299,4 +302,25 @@ void CPlayerDlg::OnTimer(UINT_PTR nIDEvent)
 
 
 	CDialogEx::OnTimer(nIDEvent);
+}
+
+
+void CPlayerDlg::OnBnClickedBtnNextframe()
+{
+	// TODO: 在此添加控件通知处理程序代码
+	m_csPlayCtrl.SendLocalPlayMessage(_LocalPlay_Msg_NextFrame);
+}
+
+
+void CPlayerDlg::OnBnClickedBtnPlaypause()
+{
+	// TODO: 在此添加控件通知处理程序代码
+	m_csPlayCtrl.SendLocalPlayMessage(_LocalPlay_Msg_Play);
+}
+
+
+void CPlayerDlg::OnBnClickedBtnPrevframe()
+{
+	// TODO: 在此添加控件通知处理程序代码
+	m_csPlayCtrl.SendLocalPlayMessage(_LocalPlay_Msg_PrevFrame);
 }

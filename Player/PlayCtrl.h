@@ -6,16 +6,6 @@
 
 using namespace std;
 
-enum 
-{
-	_Render_Msg_Data = 0,
-	_Render_Msg_ChangeMode,
-};
-
-enum
-{
-	_Save_Msg_Data = 0,
-};
 
 typedef struct _tagStFrameHeader
 {
@@ -73,7 +63,36 @@ private:
 	PFUN_ShareMemReleaseCB m_pFunCB;
 };
 
+enum
+{
+	_PlayMode_Play,
+	_PlayMode_Pause,
+	_PlayMode_NextFrame,
+	_PlayMode_PrevFrame,
+	_PlayMode_Stop,
+};
 
+enum
+{
+	_Render_Msg_Data = 0,
+	_Render_Msg_ChangeMode,
+};
+
+enum
+{
+	_Save_Msg_Data = 0,
+};
+
+enum
+{
+	_LocalPlay_Msg_Play = 0,
+	_LocalPlay_Msg_Pause,
+	_LocalPlay_Msg_NextFrame,
+	_LocalPlay_Msg_PrevFrame,
+	_LocalPlay_Msg_ChangeRate,	/* WPARAM: rate */
+
+	_LocalPlay_Msg_Reserved,
+};
 
 enum
 {
@@ -98,6 +117,7 @@ typedef struct _tagStLocalPlayIndex
 
 typedef set<StLocalPlayIndex> CLocalPlayIndex;
 typedef set<StLocalPlayIndex>::iterator CLocalPlayIndexIter;
+typedef set<StLocalPlayIndex>::reverse_iterator CLocalPlayIndexRIter;
 
 class CPlayCtrl
 {
@@ -118,13 +138,15 @@ public:
 	int32_t BeginLocalPlay(const TCHAR *pFileName);
 	uint32_t LocalPlayThread();
 
-	int32_t SendRenderMessage(uint32_t u32MsgType, void *pData, uint32_t u32Length);
-	int32_t SendSaveMessage(uint32_t u32MsgType, void *pData, uint32_t u32Length);
+	int32_t SendRenderMessage(uint32_t u32MsgType, void *pData = NULL, uint32_t u32Length = 0);
+	int32_t SendSaveMessage(uint32_t u32MsgType, void *pData = NULL, uint32_t u32Length = 0);
+	int32_t SendLocalPlayMessage(uint32_t u32MsgType, void *pData = NULL, uint32_t u32Length = 0);
 	int32_t SendShareData(void *pData, uint32_t u32Length, uint32_t u32ShareFlag = SHARE_DATA_RENDER);
 	int32_t SendShareData(StParamV *pParam, uint32_t u32Count, uint32_t u32ShareFlag = SHARE_DATA_RENDER);
 	int32_t ReleaseShareData(void *pHandle);
 
-
+private:
+	int32_t SendFileDataToRender(CLocalPlayIndexIter iter);
 private:
 	bool m_boIsMediaThreadExit;
 	HANDLE m_hRenderThread;

@@ -50,4 +50,7 @@ private:
 public:
 	virtual BOOL DestroyWindow();
 	afx_msg void OnTimer(UINT_PTR nIDEvent);
+	afx_msg void OnBnClickedBtnNextframe();
+	afx_msg void OnBnClickedBtnPlaypause();
+	afx_msg void OnBnClickedBtnPrevframe();
 };
