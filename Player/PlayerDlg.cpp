@@ -142,11 +142,12 @@ BOOL CPlayerDlg::OnInitDialog()
 	TRACE(L"G:\\GBServer size is:%lld\n", s64Size);
 
 	SetTimer(1, 1000, NULL);
-	SetTimer(2, 40, NULL);
+	//SetTimer(2, 15, NULL);
 
 	SetWindowText(L"1231312");
 	m_csPlayCtrl.BeginRender(GetDlgItem(IDC_STATIC_Movie)->GetSafeHwnd());
-	m_csPlayCtrl.BeginSave();
+	//m_csPlayCtrl.BeginSave();
+	m_csPlayCtrl.BeginLocalPlay(L"1536135558000.dat");
 
 	{
 		UINT32 u32Size = sizeof(StFrameHeader);
@@ -222,6 +223,9 @@ BOOL CPlayerDlg::DestroyWindow()
 }
 
 
+#define WIDTH	480
+#define HEIGHT	320
+
 void CPlayerDlg::OnTimer(UINT_PTR nIDEvent)
 {
 	// TODO: 在此添加消息处理程序代码和/或调用默认值
@@ -255,19 +259,41 @@ void CPlayerDlg::OnTimer(UINT_PTR nIDEvent)
 	}
 	if (nIDEvent == 2)
 	{
-		for (INT  i = 0; i < 3; i++)
+		for (INT  i = 0; i < 1; i++)
 		{
 			static UINT32 u32Cnt = 0;
-			static unsigned char u8Buf[800 * 600 * 3];
+			static unsigned char u8Buf[WIDTH * HEIGHT * 3];
+			static UINT64 u64Time = time(NULL);
 			unsigned char *pTmp = u8Buf;
-			for (int32_t j = 0; j < 800 * 600; j++, pTmp += 3)
+			for (int32_t j = 0; j < WIDTH * HEIGHT; j++, pTmp += 3)
 			{
 				pTmp[0] = 0;
 				pTmp[1] = 0;
 				pTmp[2] = u32Cnt;
 			}
+
+			UINT64 u64TimeTmp = u64Time * 1000 + u32Cnt * 15;
+
+			StFrameHeader stFrameHeader = { 0 };
+			stFrameHeader.u32Header = FRAME_HEADER;
+			stFrameHeader.u16Width = WIDTH;
+			stFrameHeader.u16Height = HEIGHT;
+
+			stFrameHeader.u32TimeStampHigh = (uint32_t)(u64TimeTmp >> 32);
+			stFrameHeader.u32TimeStampLow = (uint32_t)u64TimeTmp;
+
+
+			UINT32 u32Length = WIDTH * HEIGHT * 3;
+
+			StParamV stParam[3] = 
+			{
+				{ &stFrameHeader, sizeof(stFrameHeader) },
+				{ &u32Length, sizeof(UINT32) },
+				{ u8Buf, u32Length },
+			};
+
 			u32Cnt++;
-			m_csPlayCtrl.SendShareData(u8Buf, 800 * 600 * 3);
+			m_csPlayCtrl.SendShareData(stParam, 3, SHARE_DATA_RENDER | SHARE_DATA_SAVE);
 		}
 	}
 

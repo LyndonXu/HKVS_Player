@@ -351,6 +351,11 @@ HRESULT D3DOffscreenRender::destroyDirect3D()
 
 int D3DOffscreenRender::renderRGB(unsigned char *pRGB, int width, int height)
 {
+	if (pRGB == NULL)
+	{
+		width = m_width;
+		height = m_height;
+	}
 	if (width <= 0 || height <= 0 || m_hWnd == NULL)
 	{
 		return -1;

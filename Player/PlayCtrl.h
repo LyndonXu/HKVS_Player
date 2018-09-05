@@ -1,7 +1,10 @@
 #pragma once
 #include <stdint.h>
+#include <set>
 
 #include "d3doffscreenrender.h"
+
+using namespace std;
 
 enum 
 {
@@ -34,6 +37,8 @@ typedef struct _tagStFrameHeader
 	uint32_t u32Reserved;
 	uint32_t u32CheckSum;
 }StFrameHeader;
+
+#define FRAME_HEADER		(0xF1000000)
 
 typedef struct _tagStParamV
 {
@@ -68,6 +73,32 @@ private:
 	PFUN_ShareMemReleaseCB m_pFunCB;
 };
 
+
+
+enum
+{
+	_Share_Data_Pos_Render = 0,
+	_Share_Data_Pos_Save,
+
+	_Share_Data_Pos_Reserved,
+};
+#define SHARE_DATA_RENDER	(1 << _Share_Data_Pos_Render)
+#define SHARE_DATA_SAVE		(1 << _Share_Data_Pos_Save)
+
+
+typedef struct _tagStLocalPlayIndex
+{
+	StFrameHeader stHeader;
+	uint32_t u32Index;
+	uint64_t u64FilePos;
+	uint32_t u32RawDataLength;
+	uint64_t u64RawDataFilePos;
+}StLocalPlayIndex;
+
+
+typedef set<StLocalPlayIndex> CLocalPlayIndex;
+typedef set<StLocalPlayIndex>::iterator CLocalPlayIndexIter;
+
 class CPlayCtrl
 {
 public:
@@ -83,9 +114,14 @@ public:
 	int32_t BeginSave();
 	uint32_t SaveThread();
 
+	int32_t StopLocalPlay();
+	int32_t BeginLocalPlay(const TCHAR *pFileName);
+	uint32_t LocalPlayThread();
+
 	int32_t SendRenderMessage(uint32_t u32MsgType, void *pData, uint32_t u32Length);
 	int32_t SendSaveMessage(uint32_t u32MsgType, void *pData, uint32_t u32Length);
-	int32_t SendShareData(void *pData, uint32_t u32Length);
+	int32_t SendShareData(void *pData, uint32_t u32Length, uint32_t u32ShareFlag = SHARE_DATA_RENDER);
+	int32_t SendShareData(StParamV *pParam, uint32_t u32Count, uint32_t u32ShareFlag = SHARE_DATA_RENDER);
 	int32_t ReleaseShareData(void *pHandle);
 
 
@@ -101,10 +137,22 @@ private:
 	HANDLE m_hSemForSaveThread;
 	uint32_t m_u32SaveThreadID;
 
+	bool m_boIsLocalPlayThreadExit;
+	HANDLE m_hLocalPlayThread;
+	HANDLE m_hSemForLocalPlayThread;
+	uint32_t m_u32LocalPlayThreadID;
+
 	HANDLE m_hShareDataMutex;
 
 	HWND m_hRenderWnd;
 	D3DOffscreenRender m_csRender;
+
+	string m_csStrSaveFolder;
+	uint32_t m_u32SaveContinueTime; /* ms */
+
+	wstring m_csStrLocalPlayFile;
+	CLocalPlayIndex m_csLocalPlayIndex;
+	HANDLE m_hLocalFile;
 
 };
 
