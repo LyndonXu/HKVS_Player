@@ -74,13 +74,13 @@ enum
 
 enum
 {
-	_Render_Msg_Data = 0,
+	_Render_Msg_Data = WM_USER + 200,
 	_Render_Msg_ChangeMode,
 };
 
 enum
 {
-	_Save_Msg_Data = 0,
+	_Save_Msg_Data = WM_USER + 200,
 };
 
 enum
