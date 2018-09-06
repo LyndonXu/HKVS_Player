@@ -37,8 +37,12 @@ public:
 private:
 	CritSec * m_pLock;
 };
-typedef int32_t(*PFUN_GetFolderSizeCB)(const WCHAR *pName, WIN32_FIND_DATA *pInfo, void *pContext);
+typedef int32_t(*PFUN_GetFolderSizeCB)(const wchar_t *pName, WIN32_FIND_DATA *pInfo, void *pContext);
 
-int64_t GetFolderSize(const WCHAR *pPath, PFUN_GetFolderSizeCB pFunCB = NULL, 
+int64_t GetFolderSize(const wchar_t *pPath, PFUN_GetFolderSizeCB pFunCB = NULL,
 	void *pContext = NULL);
+
+int32_t Convert(const char *pStrSrc, wstring &csWscDest);
+int32_t Convert(const wchar_t *pwStrSrc, string &csStrDrst);
+bool SuperMkDir(CString P);
 

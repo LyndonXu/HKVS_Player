@@ -5,6 +5,7 @@
 #pragma once
 #include "GetSysInfo.h"
 #include "PlayCtrl.h"
+#include "DlgShow.h"
 
 // CPlayerDlg ¶Ô»°¿ò
 class CPlayerDlg : public CDialogEx
@@ -47,10 +48,24 @@ private:
 
 	CGetSysInfo m_csSysInfo;
 	CPlayCtrl m_csPlayCtrl;
+
+	CDlgShow *m_pDlgShow;
+
 public:
+
 	virtual BOOL DestroyWindow();
 	afx_msg void OnTimer(UINT_PTR nIDEvent);
 	afx_msg void OnBnClickedBtnNextframe();
 	afx_msg void OnBnClickedBtnPlaypause();
 	afx_msg void OnBnClickedBtnPrevframe();
+
+	LRESULT PlayCtrlMessage(WPARAM wMsg, LPARAM lData);
+
+	INT GetConfig(void);
+	INT SetConfig(void);
+
+
 };
+
+#define PLAYCTRL_MSG		(WM_USER + 200)
+

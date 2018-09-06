@@ -160,15 +160,23 @@ CPlayCtrl::CPlayCtrl()
 
 , m_hRenderWnd(NULL)
 
-, m_csStrSaveFolder("")
+, m_csStrSaveFolder(L"")
 , m_u32SaveContinueTime(1 * 60 * 1000)		/* 1 minute(s) */
 
 , m_csStrLocalPlayFile(L"")
 
 , m_hLocalFile(NULL)
 
+, m_hFileListMutex(NULL)
+, m_u64RecordFileTotalSize(0)
+
+, m_hMsgWnd(NULL)
+, m_u32MsgNumber(0)
+
+
 {
 	m_hShareDataMutex = CreateMutex(NULL, FALSE, NULL);
+	m_hFileListMutex = CreateMutex(NULL, FALSE, NULL);
 }
 
 
@@ -183,6 +191,39 @@ CPlayCtrl::~CPlayCtrl()
 		CloseHandle(m_hShareDataMutex);
 		m_hShareDataMutex = NULL;
 	}
+
+	if (m_hFileListMutex != NULL)
+	{
+		CloseHandle(m_hShareDataMutex);
+		m_hFileListMutex = NULL;
+	}
+}
+
+int32_t CPlayCtrl::SetFolder(const wchar_t *pStrFolder)
+{
+	if (pStrFolder != NULL)
+	{
+		if (m_csStrSaveFolder != pStrFolder)
+		{
+			m_csStrSaveFolder = pStrFolder;
+			GetRecordFolderSizeAndList();
+		}
+		return 0;
+	}
+	return -1;
+}
+
+int32_t CPlayCtrl::RegisterWNDMsg(HWND hWnd, uint32_t u32MsgNum)
+{
+	if (hWnd == NULL)
+	{
+		return -1;
+	}
+
+	m_hMsgWnd = hWnd;
+	m_u32MsgNumber = u32MsgNum;
+	
+	return 0;
 }
 
 #if 0
@@ -346,6 +387,33 @@ int32_t CPlayCtrl::BeginSave()
 	}
 	return 0;
 }
+
+uint32_t CPlayCtrl::AddFileToList(wstring &csStrFileNameBackup, uint64_t u64FileSize)
+{
+	if (WaitForSingleObject(m_hFileListMutex, 10) == WAIT_OBJECT_0)
+	{
+		StRecoderFileInfo stInfo =
+		{
+			csStrFileNameBackup,
+			u64FileSize,
+		};
+
+		m_csRecordFileList.insert(stInfo);
+
+		m_u64RecordFileTotalSize += u64FileSize;
+
+		if (m_hMsgWnd != NULL)
+		{
+			PostMessage(m_hMsgWnd, m_u32MsgNumber, _WND_Msg_FoldSize,
+				(LPARAM)((m_u64RecordFileTotalSize + 1024 * 1023) / (1024 * 1024)));
+		}
+
+		ReleaseMutex(m_hFileListMutex);
+	}
+
+	return 0;
+}
+
 uint32_t CPlayCtrl::SaveThread()
 {
 	MSG stMsg = { 0 };
@@ -357,6 +425,9 @@ uint32_t CPlayCtrl::SaveThread()
 	HANDLE hFile = NULL;
 	uint64_t u64BeginTime = 0;
 	uint64_t u64FrameCount = 0;
+
+	wstring csStrFileNameBackup;
+	uint64_t u64FileSize = 0;
 
 	while (!m_boIsSaveThreadExit)
 	{
@@ -372,9 +443,28 @@ uint32_t CPlayCtrl::SaveThread()
 				u64CurTime = (u64CurTime << 32) + pHeader->u32TimeStampLow;
 				if (hFile == NULL)
 				{
-					TCHAR tcName[256];
-					swprintf_s(tcName, 256, L"%lld.dat", u64CurTime);
-					hFile = CreateFile(tcName, GENERIC_WRITE | GENERIC_READ,
+					wchar_t wcName[256];
+					SYSTEMTIME stSysTime = { 0 };
+					GetLocalTime(&stSysTime);
+
+					swprintf_s(wcName, 256, L"%04d-%02d-%02d %02d-%02d-%02d_%03d.dat",
+						stSysTime.wYear,
+						stSysTime.wMonth,
+						stSysTime.wDay,
+						stSysTime.wHour,
+						stSysTime.wMinute,
+						stSysTime.wSecond,
+						stSysTime.wMilliseconds);
+					
+					csStrFileNameBackup = wcName;
+					u64FileSize = 0;
+
+					wstring wcStrAbsName = m_csStrSaveFolder;
+					wcStrAbsName.append(L"\\");
+					wcStrAbsName.append(wcName);
+
+					hFile = CreateFile(wcStrAbsName.c_str(), 
+						GENERIC_WRITE | GENERIC_READ,
 						FILE_SHARE_READ,
 						NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
 					u64BeginTime = u64CurTime;
@@ -385,12 +475,17 @@ uint32_t CPlayCtrl::SaveThread()
 					if (u64CurTime >=  u64BeginTime)
 					{
 						WriteFile(hFile, pData, u32Length, NULL, NULL);
+						u64FileSize += u32Length;
 						u64FrameCount++;
 
 						if ((u64CurTime - u64BeginTime) > (uint64_t)m_u32SaveContinueTime)
 						{
 							CloseHandle(hFile);
 							hFile = NULL;
+							AddFileToList(csStrFileNameBackup, u64FileSize);
+
+							csStrFileNameBackup = L"";
+							u64FileSize = 0;
 						}
 					}
 				}
@@ -419,6 +514,11 @@ uint32_t CPlayCtrl::SaveThread()
 	{
 		CloseHandle(hFile);
 		hFile = NULL;
+
+		AddFileToList(csStrFileNameBackup, u64FileSize);
+
+		csStrFileNameBackup = L"";
+		u64FileSize = 0;
 	}
 	while (PeekMessage(&stMsg, NULL, 0, 0, PM_REMOVE))
 	{
@@ -1084,3 +1184,113 @@ int32_t GetFrameHeaderCheckSum(StFrameHeader *pHeader, bool boIsCheck)
 	}
 	return 0;
 }
+
+int32_t GetFolderSizeCB(const wchar_t *pName, WIN32_FIND_DATA *pInfo, void *pContext)
+{
+	if (pContext == NULL)
+	{
+		return -1;
+	}
+	CPlayCtrl *pThis = (CPlayCtrl *)pContext;
+
+	return pThis->GetFolderSizeCBInner(pName, pInfo);
+}
+
+namespace std
+{
+	bool operator <(const StRecoderFileInfo &Left, const StRecoderFileInfo &Right)
+	{
+		return Left.cwStrName < Right.cwStrName;
+	}
+}
+
+int32_t CPlayCtrl::GetFolderSizeCBInner(const wchar_t *pName, WIN32_FIND_DATA *pInfo)
+{
+	if (wcsstr(pInfo->cFileName, L".dat") != NULL)
+	{
+		StRecoderFileInfo stInfo;
+		stInfo.cwStrName = pInfo->cFileName;
+		stInfo.u64FileSize = pInfo->nFileSizeHigh;
+
+		stInfo.u64FileSize = (stInfo.u64FileSize << 32) + pInfo->nFileSizeLow;
+
+		m_csRecordFileList.insert(stInfo);
+		m_u64RecordFileTotalSize += stInfo.u64FileSize;
+	}
+
+	return 0;
+}
+int64_t CPlayCtrl::GetRecordFolderSizeAndList()
+{
+	if (m_hFileListMutex == NULL)
+	{
+		return -1;
+	}
+	if (WaitForSingleObject(m_hFileListMutex, 1000) != WAIT_OBJECT_0)
+	{
+		return -1;
+	}
+
+	m_csRecordFileList.clear();
+	m_u64RecordFileTotalSize = 0;
+
+	SuperMkDir(m_csStrSaveFolder.c_str());
+
+	GetFolderSize(m_csStrSaveFolder.c_str(), GetFolderSizeCB, this);
+
+
+	ReleaseMutex(m_hFileListMutex);
+
+	if (m_hMsgWnd != NULL)
+	{
+		PostMessage(m_hMsgWnd, m_u32MsgNumber, _WND_Msg_FoldSize,
+			(LPARAM)((m_u64RecordFileTotalSize + 1024 * 1023) / (1024 * 1024)));
+	}
+
+	return 0;
+}
+
+int32_t CPlayCtrl::ReduceFolderSize(uint64_t u64ExpectSize)
+{
+	if (m_hFileListMutex == NULL)
+	{
+		return -1;
+	}
+	if (WaitForSingleObject(m_hFileListMutex, 1000) != WAIT_OBJECT_0)
+	{
+		return -1;
+	}
+
+	u64ExpectSize *= (1024 * 1024);
+
+	CRecoderFileListIter iter = m_csRecordFileList.begin();
+	while (iter != m_csRecordFileList.end() &&
+		m_u64RecordFileTotalSize > u64ExpectSize)
+	{
+		wstring cwStrABSName = m_csStrSaveFolder + L"\\" + iter->cwStrName;
+		if (DeleteFile(cwStrABSName.c_str()))
+		{
+			m_u64RecordFileTotalSize -= iter->u64FileSize;
+			CRecoderFileListIter iterBack = iter;
+			iter++;
+
+			m_csRecordFileList.erase(iterBack);
+		}
+		else
+		{
+			iter++;
+		}
+	}
+
+
+	ReleaseMutex(m_hFileListMutex);
+
+	if (m_hMsgWnd != NULL)
+	{
+		PostMessage(m_hMsgWnd, m_u32MsgNumber, _WND_Msg_FoldSize,
+			(LPARAM)((m_u64RecordFileTotalSize + 1024 * 1023) / (1024 * 1024)));
+	}
+
+	return 0;
+}
+

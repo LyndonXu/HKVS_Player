@@ -94,6 +94,14 @@ enum
 	_LocalPlay_Msg_Reserved,
 };
 
+
+enum
+{
+	_WND_Msg_FoldSize = 0,		/* LPRARM: size / (1024 * 1024) (Mb) */
+	_WND_Msg_PlayMode,			/* LPRARM: _PlayMode_* */
+};
+
+
 enum
 {
 	_Share_Data_Pos_Render = 0,
@@ -114,10 +122,21 @@ typedef struct _tagStLocalPlayIndex
 	uint64_t u64RawDataFilePos;
 }StLocalPlayIndex;
 
+typedef struct _tagStRecoderFileInfo
+{
+	wstring cwStrName;
+	uint64_t u64FileSize;
+}StRecoderFileInfo;
+
 
 typedef set<StLocalPlayIndex> CLocalPlayIndex;
 typedef set<StLocalPlayIndex>::iterator CLocalPlayIndexIter;
 typedef set<StLocalPlayIndex>::reverse_iterator CLocalPlayIndexRIter;
+
+
+typedef set<StRecoderFileInfo> CRecoderFileList;
+typedef set<StRecoderFileInfo>::iterator CRecoderFileListIter;
+
 
 class CPlayCtrl
 {
@@ -125,6 +144,9 @@ public:
 	CPlayCtrl();
 	~CPlayCtrl();
 
+
+	int32_t SetFolder(const wchar_t *pStrFolder);
+	int32_t RegisterWNDMsg(HWND hWnd, uint32_t u32MsgNum);
 
 	int32_t StopRender();
 	int32_t BeginRender(HWND hWnd, uint32_t u32FPS = 30);
@@ -145,8 +167,17 @@ public:
 	int32_t SendShareData(StParamV *pParam, uint32_t u32Count, uint32_t u32ShareFlag = SHARE_DATA_RENDER);
 	int32_t ReleaseShareData(void *pHandle);
 
+
+	int64_t GetRecordFolderSizeAndList();
+	int32_t ReduceFolderSize(uint64_t u64ExpectSize);/* MB */
+
+	friend int32_t GetFolderSizeCB(const wchar_t *pName, WIN32_FIND_DATA *pInfo, void *pContext);
+
 private:
+	int32_t GetFolderSizeCBInner(const wchar_t *pName, WIN32_FIND_DATA *pInfo);
 	int32_t SendFileDataToRender(CLocalPlayIndexIter iter);
+	uint32_t AddFileToList(wstring &csStrFileNameBackup, uint64_t u64FileSize);
+
 private:
 	bool m_boIsMediaThreadExit;
 	HANDLE m_hRenderThread;
@@ -169,12 +200,19 @@ private:
 	HWND m_hRenderWnd;
 	D3DOffscreenRender m_csRender;
 
-	string m_csStrSaveFolder;
+	wstring m_csStrSaveFolder;
 	uint32_t m_u32SaveContinueTime; /* ms */
 
 	wstring m_csStrLocalPlayFile;
 	CLocalPlayIndex m_csLocalPlayIndex;
 	HANDLE m_hLocalFile;
+
+	HANDLE m_hFileListMutex;
+	CRecoderFileList m_csRecordFileList;
+	uint64_t m_u64RecordFileTotalSize;
+
+	HWND m_hMsgWnd;
+	uint32_t m_u32MsgNumber;
 
 };
 

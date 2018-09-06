@@ -50,6 +50,7 @@ END_MESSAGE_MAP()
 
 CPlayerDlg::CPlayerDlg(CWnd* pParent /*=NULL*/)
 	: CDialogEx(IDD_PLAYER_DIALOG, pParent)
+	, m_pDlgShow(NULL)
 {
 	m_hIcon = AfxGetApp()->LoadIcon(IDR_MAINFRAME);
 }
@@ -67,15 +68,11 @@ BEGIN_MESSAGE_MAP(CPlayerDlg, CDialogEx)
 	ON_BN_CLICKED(IDC_BTN_NextFrame, &CPlayerDlg::OnBnClickedBtnNextframe)
 	ON_BN_CLICKED(IDC_BTN_PlayPause, &CPlayerDlg::OnBnClickedBtnPlaypause)
 	ON_BN_CLICKED(IDC_BTN_PrevFrame, &CPlayerDlg::OnBnClickedBtnPrevframe)
+	ON_MESSAGE(PLAYCTRL_MSG, &CPlayerDlg::PlayCtrlMessage)
+
 END_MESSAGE_MAP()
 
 
-int32_t GetFolderSizeCB(const WCHAR *pName, WIN32_FIND_DATA *pInfo, void *pContext)
-{
-	TRACE(L"%s\n", pName);
-
-	return 0;
-}
 
 static UINT s_uIndicators[] =
 {
@@ -118,6 +115,36 @@ BOOL CPlayerDlg::OnInitDialog()
 	// TODO: 在此添加额外的初始化代码
 
 	{
+		m_pDlgShow = new CDlgShow;
+		if (m_pDlgShow != NULL)
+		{
+			m_pDlgShow->SetCreateWND(this);
+			m_pDlgShow->Create(IDD_DLG_Show, GetDesktopWindow());
+			m_pDlgShow->ShowWindow(SW_SHOW);
+		}
+	}
+	{
+		int s32Width = GetSystemMetrics(SM_CXSCREEN);
+		int s32Height = GetSystemMetrics(SM_CYSCREEN);
+
+		CRect csClient;
+		GetClientRect(csClient);
+
+		int s32Left = (s32Width - csClient.Width()) / 2 - 8;
+		int s32Top = s32Height - csClient.Height() - 60;
+		csClient.MoveToXY(s32Left, s32Top);
+		
+		csClient.right += 16;
+		csClient.bottom += 20;
+
+		::SetWindowPos(GetSafeHwnd(), NULL,//HWND_TOPMOST, 
+			csClient.left, csClient.top,
+			csClient.Width(), csClient.Height(),
+			SWP_SHOWWINDOW);
+	}
+
+
+	{
 		CRect csRect;
 
 		GetClientRect(csRect);
@@ -139,18 +166,19 @@ BOOL CPlayerDlg::OnInitDialog()
 		m_csStatusBar.SetPaneText(_StatusBar_NetInterface, L"3", TRUE);
 
 	}
-
-
-	int64_t s64Size = GetFolderSize(L"G:\\GBServer"/*, GetFolderSizeCB*/);
-	TRACE(L"G:\\GBServer size is:%lld\n", s64Size);
+	//SetConfig();
+	//GetConfig();
 
 	SetTimer(1, 1000, NULL);
+
 	//SetTimer(2, 40, NULL);
 
 	SetWindowText(L"1231312");
-	m_csPlayCtrl.BeginRender(GetDlgItem(IDC_STATIC_Movie)->GetSafeHwnd());
+	m_csPlayCtrl.RegisterWNDMsg(GetSafeHwnd(), PLAYCTRL_MSG);
+	//m_csPlayCtrl.SetFolder(L"F:\\GIT\\HKVS_Player\\Player\\");
+	//m_csPlayCtrl.BeginRender(GetDlgItem(IDC_STATIC_Movie)->GetSafeHwnd());
 	//m_csPlayCtrl.BeginSave();
-	m_csPlayCtrl.BeginLocalPlay(L"1536135558000.dat");
+	//m_csPlayCtrl.BeginLocalPlay(L"1536135558000.dat");
 
 	{
 		UINT32 u32Size = sizeof(StFrameHeader);
@@ -222,7 +250,152 @@ BOOL CPlayerDlg::DestroyWindow()
 	KillTimer(1);
 	KillTimer(2);
 
+	if (m_pDlgShow != NULL)
+	{
+		delete m_pDlgShow;
+	}
+
 	return CDialogEx::DestroyWindow();
+}
+
+INT CPlayerDlg::SetConfig(void)
+{
+	wchar_t wcFileName[256] = { 0 };
+	DWORD dwRet = GetModuleFileName(NULL, wcFileName, 256);
+
+	if (dwRet != 0 && dwRet < 254)
+	{
+		TCHAR *pName = wcsrchr(wcFileName, _T('\\'));
+		if (pName != NULL)
+		{
+			wsprintf(pName + 1, _T("%s"), _T("config.ini"));
+		}
+	}
+	else
+	{
+		wsprintf(wcFileName, _T("%s"), _T("config.ini"));
+	}
+
+	WritePrivateProfileString(
+		_T("LocalSet")
+		, _T("SaveFolder")
+		, _T("F:\\SaveFolder")
+		, wcFileName
+	);
+
+	WritePrivateProfileString(
+		_T("LocalSet")
+		, _T("FolderMaxSize")
+		, _T("20480MB")
+		, wcFileName
+	);
+
+	WritePrivateProfileString(
+		_T("LocalSet")
+		, _T("SaveContinusTime")
+		, _T("5min")
+		, wcFileName
+	);
+
+	WritePrivateProfileString(
+		_T("LocalSet")
+		, _T("Title")
+		, _T("User config")
+		, wcFileName
+	);
+
+	return 0;
+}
+INT CPlayerDlg::GetConfig(void)
+{
+	wchar_t wcFileName[256] = { 0 };
+	DWORD dwRet = GetModuleFileName(NULL, wcFileName, 256);
+
+	if (dwRet != 0 && dwRet < 254)
+	{
+		TCHAR *pName = wcsrchr(wcFileName, _T('\\'));
+		if (pName != NULL)
+		{
+			wsprintf(pName + 1, _T("%s"), _T("config.ini"));
+		}
+	}
+	else
+	{
+		wsprintf(wcFileName, _T("%s"), _T("config.ini"));
+	}
+
+	wchar_t wcValue[256];
+	string csStr;
+
+	dwRet = GetPrivateProfileString(
+		_T("LocalSet")
+		, _T("SaveFolder")
+		, _T("F:\\SaveFolder")
+		, wcValue, 256 - 2
+		, wcFileName
+	);
+
+	Convert(wcValue, csStr);
+
+	PRINT("SaveFolder: %s\n", csStr.c_str());
+
+
+	dwRet = GetPrivateProfileString(
+		_T("LocalSet")
+		, _T("FolderMaxSize")
+		, _T("20480MB")
+		, wcValue, 256 - 2
+		, wcFileName
+	);
+
+	Convert(wcValue, csStr);
+	PRINT("FolderMaxSize: %s\n", csStr.c_str());
+
+	dwRet = GetPrivateProfileString(
+		_T("LocalSet")
+		, _T("SaveContinusTime")
+		, _T("5min")
+		, wcValue, 256 - 2
+		, wcFileName
+	);
+
+	Convert(wcValue, csStr);
+	PRINT("SaveContinusTime: %s\n", csStr.c_str());
+
+	dwRet = GetPrivateProfileString(
+		_T("LocalSet")
+		, _T("Title")
+		, _T("User config")
+		, wcValue, 256 - 2
+		, wcFileName
+	);
+
+	Convert(wcValue, csStr);
+	PRINT("Title: %s\n", csStr.c_str());
+
+	return 0;
+}
+
+
+LRESULT CPlayerDlg::PlayCtrlMessage(WPARAM wMsg, LPARAM lData)
+{
+	switch (wMsg)
+	{
+		case _WND_Msg_FoldSize:
+		{
+			UINT64 u64Size = lData;
+			//u64Size *= (1024 * 1024);
+			TRACE(L"FoldSize: %lld MB\n", u64Size);
+			if (u64Size > 20 * 1024)/* 20GB */
+			{
+				m_csPlayCtrl.ReduceFolderSize(20 * 1024);
+			}
+		}
+		default:
+		break;
+	}
+
+	return 0;
 }
 
 
