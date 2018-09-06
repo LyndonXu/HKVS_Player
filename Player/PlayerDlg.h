@@ -51,6 +51,12 @@ private:
 
 	CDlgShow *m_pDlgShow;
 
+	wstring m_cswSaveFolder;
+	UINT64 m_u64FolderMaxSize;		/* MB */
+	UINT32 m_u32SaveContinusTime;	/* Minute */
+
+	wstring m_cswTitle;
+
 public:
 
 	virtual BOOL DestroyWindow();

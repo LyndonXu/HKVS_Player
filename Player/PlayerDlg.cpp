@@ -51,6 +51,12 @@ END_MESSAGE_MAP()
 CPlayerDlg::CPlayerDlg(CWnd* pParent /*=NULL*/)
 	: CDialogEx(IDD_PLAYER_DIALOG, pParent)
 	, m_pDlgShow(NULL)
+	, m_cswSaveFolder(L"F:\\")
+	, m_u64FolderMaxSize(20 * 1024)
+	, m_u32SaveContinusTime(5)
+
+	, m_cswTitle(L"User Config")
+
 {
 	m_hIcon = AfxGetApp()->LoadIcon(IDR_MAINFRAME);
 }
@@ -125,13 +131,13 @@ BOOL CPlayerDlg::OnInitDialog()
 	}
 	{
 		int s32Width = GetSystemMetrics(SM_CXSCREEN);
-		int s32Height = GetSystemMetrics(SM_CYSCREEN);
+		//int s32Height = GetSystemMetrics(SM_CYSCREEN);
 
 		CRect csClient;
 		GetClientRect(csClient);
 
 		int s32Left = (s32Width - csClient.Width()) / 2 - 8;
-		int s32Top = s32Height - csClient.Height() - 60;
+		int s32Top = 50 + 480;//s32Height - csClient.Height() - 60;
 		csClient.MoveToXY(s32Left, s32Top);
 		
 		csClient.right += 16;
@@ -167,18 +173,21 @@ BOOL CPlayerDlg::OnInitDialog()
 
 	}
 	//SetConfig();
-	//GetConfig();
+	GetConfig();
 
 	SetTimer(1, 1000, NULL);
 
 	//SetTimer(2, 40, NULL);
 
-	SetWindowText(L"1231312");
+	SetWindowText(m_cswTitle.c_str());
 	m_csPlayCtrl.RegisterWNDMsg(GetSafeHwnd(), PLAYCTRL_MSG);
-	//m_csPlayCtrl.SetFolder(L"F:\\GIT\\HKVS_Player\\Player\\");
-	//m_csPlayCtrl.BeginRender(GetDlgItem(IDC_STATIC_Movie)->GetSafeHwnd());
+	m_csPlayCtrl.SetFolder(m_cswSaveFolder.c_str());
+	if (m_pDlgShow != NULL)
+	{
+		m_csPlayCtrl.BeginRender(m_pDlgShow->GetDlgItem(IDC_STATIC_BigMovie)->GetSafeHwnd());
+	}
 	//m_csPlayCtrl.BeginSave();
-	//m_csPlayCtrl.BeginLocalPlay(L"1536135558000.dat");
+	m_csPlayCtrl.BeginLocalPlay(L"F:\\SaveFolder\\2018-09-06 03-38-39_915.dat");
 
 	{
 		UINT32 u32Size = sizeof(StFrameHeader);
@@ -336,8 +345,8 @@ INT CPlayerDlg::GetConfig(void)
 	);
 
 	Convert(wcValue, csStr);
-
 	PRINT("SaveFolder: %s\n", csStr.c_str());
+	m_cswSaveFolder = wcValue;
 
 
 	dwRet = GetPrivateProfileString(
@@ -350,6 +359,7 @@ INT CPlayerDlg::GetConfig(void)
 
 	Convert(wcValue, csStr);
 	PRINT("FolderMaxSize: %s\n", csStr.c_str());
+	swscanf(wcValue, L"%lldMB", &m_u64FolderMaxSize);
 
 	dwRet = GetPrivateProfileString(
 		_T("LocalSet")
@@ -361,6 +371,7 @@ INT CPlayerDlg::GetConfig(void)
 
 	Convert(wcValue, csStr);
 	PRINT("SaveContinusTime: %s\n", csStr.c_str());
+	swscanf(wcValue, L"%dmin", &m_u32SaveContinusTime);
 
 	dwRet = GetPrivateProfileString(
 		_T("LocalSet")
@@ -372,6 +383,7 @@ INT CPlayerDlg::GetConfig(void)
 
 	Convert(wcValue, csStr);
 	PRINT("Title: %s\n", csStr.c_str());
+	m_cswTitle = wcValue;
 
 	return 0;
 }
@@ -390,6 +402,48 @@ LRESULT CPlayerDlg::PlayCtrlMessage(WPARAM wMsg, LPARAM lData)
 			{
 				m_csPlayCtrl.ReduceFolderSize(20 * 1024);
 			}
+			break;
+		}
+		case _WND_Msg_PlayMode:
+		{
+			if (lData == _PlayMode_Play || lData == _PlayMode_Pause)
+			{
+				if (!GetDlgItem(IDC_BTN_PlayPause)->IsWindowEnabled())
+				{
+					GetDlgItem(IDC_BTN_PlayPause)->EnableWindow();
+					GetDlgItem(IDC_BTN_NextFrame)->EnableWindow();
+					GetDlgItem(IDC_BTN_PrevFrame)->EnableWindow();
+				}
+				if (lData == _PlayMode_Play)
+				{
+					GetDlgItem(IDC_BTN_PlayPause)->SetWindowText(L"暂停");
+				}
+				else
+				{
+					GetDlgItem(IDC_BTN_PlayPause)->SetWindowText(L"恢复");
+				}
+			}
+			else
+			{
+				if (GetDlgItem(IDC_BTN_PlayPause)->IsWindowEnabled())
+				{
+					GetDlgItem(IDC_BTN_PlayPause)->EnableWindow(FALSE);
+					GetDlgItem(IDC_BTN_NextFrame)->EnableWindow(FALSE);
+					GetDlgItem(IDC_BTN_PrevFrame)->EnableWindow(FALSE);
+				}
+
+			}
+			break;
+		}
+		case _WND_Msg_LocalPlayFileIndexSize:
+		{
+			PRINT("Totoal Index: %d\n", lData);
+			break;
+		}
+		case _WND_Msg_LocalPlayFileCurIndex:
+		{
+			PRINT("current Index: %d\n", lData);
+			break;
 		}
 		default:
 		break;
@@ -488,7 +542,16 @@ void CPlayerDlg::OnBnClickedBtnNextframe()
 void CPlayerDlg::OnBnClickedBtnPlaypause()
 {
 	// TODO: 在此添加控件通知处理程序代码
-	m_csPlayCtrl.SendLocalPlayMessage(_LocalPlay_Msg_Play);
+	CString csStr;
+	GetDlgItem(IDC_BTN_PlayPause)->GetWindowTextW(csStr);
+	if (csStr == L"暂停")
+	{
+		m_csPlayCtrl.SendLocalPlayMessage(_LocalPlay_Msg_Pause);
+	}
+	else
+	{
+		m_csPlayCtrl.SendLocalPlayMessage(_LocalPlay_Msg_Play);
+	}
 }
 
 

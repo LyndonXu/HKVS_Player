@@ -85,7 +85,7 @@ enum
 
 enum
 {
-	_LocalPlay_Msg_Play = 0,
+	_LocalPlay_Msg_Play = WM_USER + 200,
 	_LocalPlay_Msg_Pause,
 	_LocalPlay_Msg_NextFrame,
 	_LocalPlay_Msg_PrevFrame,
@@ -97,8 +97,10 @@ enum
 
 enum
 {
-	_WND_Msg_FoldSize = 0,		/* LPRARM: size / (1024 * 1024) (Mb) */
-	_WND_Msg_PlayMode,			/* LPRARM: _PlayMode_* */
+	_WND_Msg_FoldSize = 0,						/* LPRARM: size / (1024 * 1024) (Mb) */
+	_WND_Msg_PlayMode,							/* LPRARM: _PlayMode_* */
+	_WND_Msg_LocalPlayFileIndexSize,			/* LPRARM: Index Size */
+	_WND_Msg_LocalPlayFileCurIndex,				/* LPRARM: Current play Index */
 };
 
 

@@ -695,8 +695,20 @@ uint32_t CPlayCtrl::LocalPlayThread()
 
 		m_csLocalPlayIndex.insert(stIndex);
 
+		if ((u32Index & 0xFF) == 0xFF)
+		{
+			if (m_hMsgWnd != NULL)
+			{
+				PostMessage(m_hMsgWnd, m_u32MsgNumber, _WND_Msg_LocalPlayFileIndexSize, u32Index);
+			}
+		}
+
 	}
 
+	if (m_hMsgWnd != NULL)
+	{
+		PostMessage(m_hMsgWnd, m_u32MsgNumber, _WND_Msg_LocalPlayFileIndexSize, m_csLocalPlayIndex.size());
+	}
 	if (m_csLocalPlayIndex.size() == 0)
 	{
 		/* Send message to the windows */
@@ -726,7 +738,7 @@ uint32_t CPlayCtrl::LocalPlayThread()
 	double d64RealFPS = (double)(m_csLocalPlayIndex.size());
 	d64RealFPS  = d64RealFPS * 1000 / u64ContinusTime;
 
-	double d64PlayFPSRate = 1.0 / 30.0;//30.0 / d64RealFPS;
+	double d64PlayFPSRate = 1.0;//30.0 / d64RealFPS;
 
 	CShareMemCtrl *pCtrl = NULL;
 
@@ -739,6 +751,11 @@ uint32_t CPlayCtrl::LocalPlayThread()
 
 	uint32_t u32PlayMode = _PlayMode_Play;
 
+	if (m_hMsgWnd != NULL)
+	{
+		PostMessage(m_hMsgWnd, m_u32MsgNumber, _WND_Msg_PlayMode, u32PlayMode);
+	}
+
 	while (!m_boIsLocalPlayThreadExit)
 	{
 		uint64_t u64CurTime = timeGetTime();
@@ -750,7 +767,7 @@ uint32_t CPlayCtrl::LocalPlayThread()
 				{
 					double d64TimeDiffFromBase = (double)(u64NextReadTime - u64BaseReadTime);
 					uint32_t u32NextFrame = u32BaseFrameIndex + (uint32_t)(d64TimeDiffFromBase * d64RealFPS * d64PlayFPSRate / 1000.0 + 0.5);
-					PRINT("u32NextFrame %d\n", u32NextFrame);
+					//PRINT("u32NextFrame %d\n", u32NextFrame);
 					if (u32NextFrame > iter->u32Index || u64NextReadTime == u64BaseReadTime)
 					{
 						for (uint32_t i = iter->u32Index; i < u32NextFrame; i++)
@@ -765,6 +782,11 @@ uint32_t CPlayCtrl::LocalPlayThread()
 						{
 							SendFileDataToRender(iter);
 						}
+						if (m_hMsgWnd != NULL)
+						{
+							PostMessage(m_hMsgWnd, m_u32MsgNumber, _WND_Msg_LocalPlayFileCurIndex, iter->u32Index);
+						}
+
 					}
 				}
 
@@ -785,8 +807,10 @@ uint32_t CPlayCtrl::LocalPlayThread()
 			{
 				case _LocalPlay_Msg_Play:
 				{
-					if (u32PlayMode != _LocalPlay_Msg_Play)
+					if (u32PlayMode != _PlayMode_Play)
 					{
+						u32PlayMode = _PlayMode_Play;
+
 						if (iter == m_csLocalPlayIndex.end())
 						{
 							CLocalPlayIndexRIter rIter = m_csLocalPlayIndex.rbegin();
@@ -799,7 +823,11 @@ uint32_t CPlayCtrl::LocalPlayThread()
 						u64NextReadTime = u64BaseReadTime = timeGetTime();
 						u64FrameCnt = 0;
 
-						u32PlayMode = _LocalPlay_Msg_Play;
+						if (m_hMsgWnd != NULL)
+						{
+							PostMessage(m_hMsgWnd, m_u32MsgNumber, _WND_Msg_PlayMode, u32PlayMode);
+						}
+
 					}
 
 
@@ -807,7 +835,15 @@ uint32_t CPlayCtrl::LocalPlayThread()
 				}
 				case _LocalPlay_Msg_Pause:
 				{
-					u32PlayMode = _LocalPlay_Msg_Pause;
+					if (u32PlayMode != _PlayMode_Pause)
+					{
+						u32PlayMode = _PlayMode_Pause;
+						if (m_hMsgWnd != NULL)
+						{
+							PostMessage(m_hMsgWnd, m_u32MsgNumber, _WND_Msg_PlayMode, u32PlayMode);
+						}
+
+					}
 					break;
 				}
 				case _LocalPlay_Msg_NextFrame:
@@ -817,11 +853,22 @@ uint32_t CPlayCtrl::LocalPlayThread()
 						iter++;
 						if (iter != m_csLocalPlayIndex.end())
 						{
-							PRINT("Next Frame: %d\n", iter->u32Index);
+							//PRINT("Next Frame: %d\n", iter->u32Index);
 							SendFileDataToRender(iter);
+							if (m_hMsgWnd != NULL)
+							{
+								PostMessage(m_hMsgWnd, m_u32MsgNumber, _WND_Msg_LocalPlayFileCurIndex, iter->u32Index);
+							}
 						}
 					}
-					u32PlayMode = _LocalPlay_Msg_Pause;
+					if (u32PlayMode != _PlayMode_Pause)
+					{
+						u32PlayMode = _PlayMode_Pause;
+						if (m_hMsgWnd != NULL)
+						{
+							PostMessage(m_hMsgWnd, m_u32MsgNumber, _WND_Msg_PlayMode, u32PlayMode);
+						}
+					}
 					break;
 				}
 				case _LocalPlay_Msg_PrevFrame:
@@ -829,10 +876,21 @@ uint32_t CPlayCtrl::LocalPlayThread()
 					if (iter != m_csLocalPlayIndex.begin())
 					{
 						iter--;
-						PRINT("Prev Frame: %d\n", iter->u32Index);
+						//PRINT("Prev Frame: %d\n", iter->u32Index);
 						SendFileDataToRender(iter);
+						if (m_hMsgWnd != NULL)
+						{
+							PostMessage(m_hMsgWnd, m_u32MsgNumber, _WND_Msg_LocalPlayFileCurIndex, iter->u32Index);
+						}
 					}
-					u32PlayMode = _LocalPlay_Msg_Pause;
+					if (u32PlayMode != _PlayMode_Pause)
+					{
+						u32PlayMode = _PlayMode_Pause;
+						if (m_hMsgWnd != NULL)
+						{
+							PostMessage(m_hMsgWnd, m_u32MsgNumber, _WND_Msg_PlayMode, u32PlayMode);
+						}
+					}
 					break;
 				}
 				case _LocalPlay_Msg_ChangeRate:
@@ -969,6 +1027,7 @@ int32_t CPlayCtrl::SendLocalPlayMessage(uint32_t u32MsgType, void *pData, uint32
 	{
 		if (!PostThreadMessage(m_u32LocalPlayThreadID, u32MsgType, (WPARAM)pData, (LPARAM)u32Length))
 		{
+			PRINT("PostThreadMessage: %d\n", GetLastError());
 			return -1;
 		}
 		ReleaseSemaphore(m_hSemForLocalPlayThread, 1, NULL);
