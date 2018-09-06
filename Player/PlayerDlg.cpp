@@ -76,6 +76,9 @@ BEGIN_MESSAGE_MAP(CPlayerDlg, CDialogEx)
 	ON_BN_CLICKED(IDC_BTN_PrevFrame, &CPlayerDlg::OnBnClickedBtnPrevframe)
 	ON_MESSAGE(PLAYCTRL_MSG, &CPlayerDlg::PlayCtrlMessage)
 
+	ON_BN_CLICKED(IDC_BTN_LocalOpenClose, &CPlayerDlg::OnBnClickedBtnLocalopenclose)
+	ON_BN_CLICKED(IDC_BTN_FrameJump, &CPlayerDlg::OnBnClickedBtnFramejump)
+	ON_BN_CLICKED(IDC_BTN_FPSRateSet, &CPlayerDlg::OnBnClickedBtnFpsrateset)
 END_MESSAGE_MAP()
 
 
@@ -137,7 +140,7 @@ BOOL CPlayerDlg::OnInitDialog()
 		GetClientRect(csClient);
 
 		int s32Left = (s32Width - csClient.Width()) / 2 - 8;
-		int s32Top = 50 + 480;//s32Height - csClient.Height() - 60;
+		int s32Top = 50 + 338;//s32Height - csClient.Height() - 60;
 		csClient.MoveToXY(s32Left, s32Top);
 		
 		csClient.right += 16;
@@ -182,21 +185,16 @@ BOOL CPlayerDlg::OnInitDialog()
 	SetWindowText(m_cswTitle.c_str());
 	m_csPlayCtrl.RegisterWNDMsg(GetSafeHwnd(), PLAYCTRL_MSG);
 	m_csPlayCtrl.SetFolder(m_cswSaveFolder.c_str());
+	m_csPlayCtrl.SetSaveContinusTime(m_u32SaveContinusTime);
 	if (m_pDlgShow != NULL)
 	{
-		m_csPlayCtrl.BeginRender(m_pDlgShow->GetDlgItem(IDC_STATIC_BigMovie)->GetSafeHwnd());
+		//m_csPlayCtrl.BeginRender(m_pDlgShow->GetDlgItem(IDC_STATIC_BigMovie)->GetSafeHwnd());
 	}
 	//m_csPlayCtrl.BeginSave();
-	m_csPlayCtrl.BeginLocalPlay(L"F:\\SaveFolder\\2018-09-06 03-38-39_915.dat");
+	//m_csPlayCtrl.BeginLocalPlay(L"F:\\SaveFolder\\2018-09-06 03-38-39_915.dat");
 
-	{
-		UINT32 u32Size = sizeof(StFrameHeader);
-		u32Size = u32Size;
-		StFrameHeader stHeader = { 1, 2, 3, 4, 5, 6, 7 };
-		int32_t s32Ret = GetFrameHeaderCheckSum(&stHeader);
-		s32Ret = GetFrameHeaderCheckSum(&stHeader, true);
-		s32Ret = s32Ret;
-	}
+	LocalPlayWidgetEnable(0, FALSE);
+	DevicePlayWidgetEnable(0, FALSE);
 
 	return TRUE;  // 除非将焦点设置到控件，否则返回 TRUE
 }
@@ -410,9 +408,9 @@ LRESULT CPlayerDlg::PlayCtrlMessage(WPARAM wMsg, LPARAM lData)
 			{
 				if (!GetDlgItem(IDC_BTN_PlayPause)->IsWindowEnabled())
 				{
-					GetDlgItem(IDC_BTN_PlayPause)->EnableWindow();
-					GetDlgItem(IDC_BTN_NextFrame)->EnableWindow();
-					GetDlgItem(IDC_BTN_PrevFrame)->EnableWindow();
+					LocalPlayWidgetEnable(1);
+					DevicePlayWidgetEnable(1, FALSE);
+					GetDlgItem(IDC_BTN_LocalOpenClose)->SetWindowText(L"关闭");
 				}
 				if (lData == _PlayMode_Play)
 				{
@@ -425,24 +423,35 @@ LRESULT CPlayerDlg::PlayCtrlMessage(WPARAM wMsg, LPARAM lData)
 			}
 			else
 			{
-				if (GetDlgItem(IDC_BTN_PlayPause)->IsWindowEnabled())
-				{
-					GetDlgItem(IDC_BTN_PlayPause)->EnableWindow(FALSE);
-					GetDlgItem(IDC_BTN_NextFrame)->EnableWindow(FALSE);
-					GetDlgItem(IDC_BTN_PrevFrame)->EnableWindow(FALSE);
-				}
+				//if (GetDlgItem(IDC_BTN_PlayPause)->IsWindowEnabled())
+				//{
+				//	GetDlgItem(IDC_BTN_PlayPause)->EnableWindow(FALSE);
+				//	GetDlgItem(IDC_BTN_NextFrame)->EnableWindow(FALSE);
+				//	GetDlgItem(IDC_BTN_PrevFrame)->EnableWindow(FALSE);
+				//}
 
 			}
 			break;
 		}
 		case _WND_Msg_LocalPlayFileIndexSize:
 		{
-			PRINT("Totoal Index: %d\n", lData);
+			//PRINT("Totoal Index: %d\n", lData);
+			CString csStr;
+			csStr.Format(L"%d", (UINT32)lData);
+			GetDlgItem(IDC_STATIC_TotalFrame)->SetWindowText(csStr);
 			break;
 		}
 		case _WND_Msg_LocalPlayFileCurIndex:
 		{
-			PRINT("current Index: %d\n", lData);
+			//PRINT("current Index: %d\n", lData);
+			CString csStr;
+			csStr.Format(L"%d", (UINT32)lData + 1);
+			GetDlgItem(IDC_STATIC_CurFrame)->SetWindowText(csStr);
+			break;
+		}
+		case _WND_Msg_ShowRectInvalidate:
+		{
+			m_pDlgShow->GetDlgItem(IDC_STATIC_BigMovie)->Invalidate();
 			break;
 		}
 		default:
@@ -531,6 +540,74 @@ void CPlayerDlg::OnTimer(UINT_PTR nIDEvent)
 	CDialogEx::OnTimer(nIDEvent);
 }
 
+void CPlayerDlg::LocalPlayWidgetEnable(UINT32 u32Level, BOOL boIsEnable/* = TRUE*/)
+{
+	const UINT32 u32ID[] =
+	{
+		IDC_BTN_PrevFrame,
+		IDC_BTN_PlayPause,
+		IDC_BTN_NextFrame,
+		IDC_BTN_FrameJump,
+		IDC_BTN_FPSRateSet,
+		IDC_EDIT_FrameJump,
+		IDC_EDIT_FPSRate,
+
+		IDC_BTN_LocalOpenClose,
+		IDC_BTN_LocalSearch,
+	};
+	UINT32 u32Count = 0;
+	if (u32Level == 0)
+	{
+		u32Count = 7;
+	}
+	else
+	{
+		u32Count = 9;
+	}
+	for (UINT32 i = 0; i < u32Count; i++)
+	{
+		GetDlgItem(u32ID[i])->EnableWindow(boIsEnable);
+	}
+
+	if (!boIsEnable)
+	{
+		GetDlgItem(IDC_STATIC_CurFrame)->SetWindowText(L"0");
+		GetDlgItem(IDC_STATIC_TotalFrame)->SetWindowText(L"0");
+		GetDlgItem(IDC_EDIT_FrameJump)->SetWindowText(L"");
+		GetDlgItem(IDC_EDIT_FPSRate)->SetWindowText(L"");
+	}
+
+}
+
+void CPlayerDlg::DevicePlayWidgetEnable(UINT32 u32Level, BOOL boIsEnable/* = TRUE*/)
+{
+	const UINT32 u32ID[] =
+	{
+		IDC_BTN_DeviceCapture,
+		IDC_BTN_DeviceParamGet,
+		IDC_BTN_DeviceParamSet,
+		IDC_EDIT_Exposure,
+		IDC_EDIT_Gain,
+		IDC_EDIT_FPS,
+
+		IDC_BTN_DeviceOpenClose,
+	};
+	UINT32 u32Count = 0;
+	if (u32Level == 0)
+	{
+		u32Count = 6;
+	}
+	else
+	{
+		u32Count = 7;
+	}
+	for (UINT32 i = 0; i < u32Count; i++)
+	{
+		GetDlgItem(u32ID[i])->EnableWindow(boIsEnable);
+	}
+}
+
+
 
 void CPlayerDlg::OnBnClickedBtnNextframe()
 {
@@ -559,4 +636,97 @@ void CPlayerDlg::OnBnClickedBtnPrevframe()
 {
 	// TODO: 在此添加控件通知处理程序代码
 	m_csPlayCtrl.SendLocalPlayMessage(_LocalPlay_Msg_PrevFrame);
+}
+
+
+void CPlayerDlg::OnBnClickedBtnLocalopenclose()
+{
+	// TODO: 在此添加控件通知处理程序代码
+
+	CString csStr;
+	GetDlgItem(IDC_BTN_LocalOpenClose)->GetWindowText(csStr);
+	if (csStr == L"关闭")
+	{
+		m_csPlayCtrl.StopLocalPlay();
+		Sleep(60);/* let render receive all frame */
+		m_csPlayCtrl.StopRender();
+
+		LocalPlayWidgetEnable(0, FALSE);
+		DevicePlayWidgetEnable(1, TRUE);
+		DevicePlayWidgetEnable(0, FALSE);
+
+		GetDlgItem(IDC_BTN_LocalOpenClose)->SetWindowText(L"打开");
+
+		return;
+	}
+
+	CFileDialog  csDlg(TRUE,
+		NULL,
+		NULL,
+		OFN_HIDEREADONLY | OFN_OVERWRITEPROMPT,
+		L"DAT Files(*.dat)|*.dat|"
+		L"All Files(*.*)|*.*||");
+	if (csDlg.DoModal() == IDCANCEL)
+	{
+		return;
+	}
+
+	csStr = csDlg.GetPathName();
+	
+	m_csPlayCtrl.BeginRender(m_pDlgShow->GetDlgItem(IDC_STATIC_BigMovie)->GetSafeHwnd());
+
+	m_csPlayCtrl.BeginLocalPlay(csStr.GetString());
+}
+
+
+void CPlayerDlg::OnBnClickedBtnFramejump()
+{
+	// TODO: 在此添加控件通知处理程序代码
+
+	CString csStr;
+	GetDlgItem(IDC_EDIT_FrameJump)->GetWindowText(csStr);
+
+	UINT32 u32JumpNumber = _wtoi(csStr.GetString());
+
+	m_csPlayCtrl.SendLocalPlayMessage(_LocalPlay_Msg_Jump, (void *)u32JumpNumber);
+
+}
+
+
+void CPlayerDlg::OnBnClickedBtnFpsrateset()
+{
+	// TODO: 在此添加控件通知处理程序代码
+	CString csStr;
+	GetDlgItem(IDC_EDIT_FPSRate)->GetWindowText(csStr);
+
+	const wchar_t *pStr = csStr.GetString();
+	UINT32 u32Start = 0;
+	if (pStr[0] != L'-')
+	{
+		u32Start = 0;
+	}
+	else
+	{
+		u32Start = 1;
+	}
+	for (UINT32 i = u32Start; i < wcslen(pStr); i++)
+	{
+		if ((pStr[i] > L'9') || (pStr[i] < L'0'))
+		{
+			MessageBox(L"输入格式错误");
+			return;
+		}
+	}
+	INT32 s32Rate = _wtoi(pStr + u32Start);
+	if (u32Start != 0)
+	{
+		s32Rate = 0 - s32Rate;
+	}
+	if (s32Rate == 0 || s32Rate > 30 || s32Rate < -30)
+	{
+		MessageBox(L"输入格式错误");
+		return;
+	}
+
+	m_csPlayCtrl.SendLocalPlayMessage(_LocalPlay_Msg_ChangeRate, (void *)s32Rate);
 }

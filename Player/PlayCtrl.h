@@ -89,7 +89,8 @@ enum
 	_LocalPlay_Msg_Pause,
 	_LocalPlay_Msg_NextFrame,
 	_LocalPlay_Msg_PrevFrame,
-	_LocalPlay_Msg_ChangeRate,	/* WPARAM: rate */
+	_LocalPlay_Msg_ChangeRate,	/* WPARAM: rate[-30, 0) (0, 30] */
+	_LocalPlay_Msg_Jump,		/* WPARAM: index */
 
 	_LocalPlay_Msg_Reserved,
 };
@@ -101,8 +102,8 @@ enum
 	_WND_Msg_PlayMode,							/* LPRARM: _PlayMode_* */
 	_WND_Msg_LocalPlayFileIndexSize,			/* LPRARM: Index Size */
 	_WND_Msg_LocalPlayFileCurIndex,				/* LPRARM: Current play Index */
+	_WND_Msg_ShowRectInvalidate,				/* NULL */
 };
-
 
 enum
 {
@@ -148,6 +149,7 @@ public:
 
 
 	int32_t SetFolder(const wchar_t *pStrFolder);
+	int32_t SetSaveContinusTime(uint32_t u32Time);/* min */
 	int32_t RegisterWNDMsg(HWND hWnd, uint32_t u32MsgNum);
 
 	int32_t StopRender();

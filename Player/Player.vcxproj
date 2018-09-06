@@ -220,6 +220,9 @@
     <None Include="res\Player.rc2" />
   </ItemGroup>
   <ItemGroup>
+    <Image Include="res\icon1.ico" />
+    <Image Include="res\LOGO.bmp" />
+    <Image Include="res\LOGO.ico" />
     <Image Include="res\Player.ico" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

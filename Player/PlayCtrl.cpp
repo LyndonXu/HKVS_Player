@@ -1,4 +1,7 @@
 #include "stdafx.h"
+
+#include <algorithm>
+
 #include <Windows.h>
 #include <timeapi.h>
 #include "PlayCtrl.h"
@@ -213,6 +216,16 @@ int32_t CPlayCtrl::SetFolder(const wchar_t *pStrFolder)
 	return -1;
 }
 
+int32_t CPlayCtrl::SetSaveContinusTime(uint32_t u32Time) /* min */
+{
+	if (u32Time <= 10 && u32Time != 0)
+	{
+		m_u32SaveContinueTime = u32Time * 60 * 1000;
+	}
+	return 0;
+}
+
+
 int32_t CPlayCtrl::RegisterWNDMsg(HWND hWnd, uint32_t u32MsgNum)
 {
 	if (hWnd == NULL)
@@ -332,6 +345,7 @@ uint32_t CPlayCtrl::RenderThread()
 		}
 	}
 
+	PostMessage(m_hMsgWnd, m_u32MsgNumber, _WND_Msg_ShowRectInvalidate, NULL);
 	return 0;
 }
 
@@ -775,16 +789,17 @@ uint32_t CPlayCtrl::LocalPlayThread()
 							iter++;
 							if (iter == m_csLocalPlayIndex.end())
 							{
+								iter--;
 								break;
 							}
 						}
 						if (iter != m_csLocalPlayIndex.end())
 						{
 							SendFileDataToRender(iter);
-						}
-						if (m_hMsgWnd != NULL)
-						{
-							PostMessage(m_hMsgWnd, m_u32MsgNumber, _WND_Msg_LocalPlayFileCurIndex, iter->u32Index);
+							if (m_hMsgWnd != NULL)
+							{
+								PostMessage(m_hMsgWnd, m_u32MsgNumber, _WND_Msg_LocalPlayFileCurIndex, iter->u32Index);
+							}
 						}
 
 					}
@@ -895,7 +910,73 @@ uint32_t CPlayCtrl::LocalPlayThread()
 				}
 				case _LocalPlay_Msg_ChangeRate:
 				{
-					d64PlayFPSRate = (double)stMsg.wParam;
+					int32_t s32Rate = (int32_t)stMsg.wParam;
+					if (s32Rate != 0)
+					{
+						if (s32Rate > 0)
+						{
+							d64PlayFPSRate = (double)s32Rate;
+						}
+						else
+						{
+							s32Rate = 0 - s32Rate;
+							d64PlayFPSRate = (double)s32Rate;
+							d64PlayFPSRate = 1.0 / d64PlayFPSRate;
+						}
+						if (u32PlayMode == _PlayMode_Play)
+						{
+							u64NextReadTime = u64BaseReadTime = timeGetTime();
+							u64FrameCnt = 0;
+
+							if (iter == m_csLocalPlayIndex.end())
+							{
+								CLocalPlayIndexRIter rIter = m_csLocalPlayIndex.rbegin();
+								u32BaseFrameIndex = rIter->u32Index;
+							}
+							else
+							{
+								u32BaseFrameIndex = iter->u32Index;
+							}
+
+						}
+					}
+					break;
+				}
+				case _LocalPlay_Msg_Jump:
+				{
+					uint32_t u32JumpIndex = (uint32_t)stMsg.wParam;
+					CLocalPlayIndexIter iterJump = m_csLocalPlayIndex.end();
+					if ((u32JumpIndex) <= m_csLocalPlayIndex.size())
+					{
+						if (u32JumpIndex != 0)
+						{
+							u32JumpIndex--;
+						}
+						
+						StLocalPlayIndex stIndex = { 0 };
+						stIndex.u32Index = u32JumpIndex;
+						iterJump = m_csLocalPlayIndex.find(stIndex);
+					}
+					if (iterJump == m_csLocalPlayIndex.end())
+					{
+						break;
+					}
+				
+					iter = iterJump;
+
+					if (u32PlayMode == _PlayMode_Play)
+					{
+						u64NextReadTime = u64BaseReadTime = timeGetTime();
+						u64FrameCnt = 0;
+						u32BaseFrameIndex = iter->u32Index;
+					}
+
+					SendFileDataToRender(iter);
+					if (m_hMsgWnd != NULL)
+					{
+						PostMessage(m_hMsgWnd, m_u32MsgNumber, _WND_Msg_LocalPlayFileCurIndex, iter->u32Index);
+					}
+
 					break;
 				}
 				default:

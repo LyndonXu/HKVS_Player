@@ -70,7 +70,13 @@ public:
 	INT GetConfig(void);
 	INT SetConfig(void);
 
+	void LocalPlayWidgetEnable(UINT32 u32Level, BOOL boIsEnable = TRUE);
+	void DevicePlayWidgetEnable(UINT32 u32Level, BOOL boIsEnable = TRUE);
 
+
+	afx_msg void OnBnClickedBtnLocalopenclose();
+	afx_msg void OnBnClickedBtnFramejump();
+	afx_msg void OnBnClickedBtnFpsrateset();
 };
 
 #define PLAYCTRL_MSG		(WM_USER + 200)

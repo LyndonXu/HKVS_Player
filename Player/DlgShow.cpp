@@ -74,7 +74,7 @@ BOOL CDlgShow::OnInitDialog()
 	//int s32Height = GetSystemMetrics(SM_CYSCREEN);
 	int s32Left = (s32Width - 600) / 2;
 	int s32Top = 50;
-	CRect csClient(s32Left, s32Top, s32Left + 600, s32Top + 480);
+	CRect csClient(s32Left, s32Top, s32Left + 600, s32Top + 338);
 
 	::SetWindowPos(GetSafeHwnd(), NULL,//HWND_TOPMOST, 
 		csClient.left, csClient.top,
