@@ -51,6 +51,9 @@
     <ClInclude Include="DlgShow.h">
       <Filter>头文件</Filter>
     </ClInclude>
+    <ClInclude Include="DlgSearch.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Player.cpp">
@@ -75,6 +78,9 @@
       <Filter>源文件</Filter>
     </ClCompile>
     <ClCompile Include="DlgShow.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="DlgSearch.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
   </ItemGroup>

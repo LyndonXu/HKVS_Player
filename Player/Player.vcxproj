@@ -188,6 +188,7 @@
   <ItemGroup>
     <ClInclude Include="colorspace.h" />
     <ClInclude Include="d3doffscreenrender.h" />
+    <ClInclude Include="DlgSearch.h" />
     <ClInclude Include="DlgShow.h" />
     <ClInclude Include="GetSysInfo.h" />
     <ClInclude Include="PlayCtrl.h" />
@@ -200,6 +201,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="d3doffscreenrender.cpp" />
+    <ClCompile Include="DlgSearch.cpp" />
     <ClCompile Include="DlgShow.cpp" />
     <ClCompile Include="GetSysInfo.cpp" />
     <ClCompile Include="PlayCtrl.cpp" />

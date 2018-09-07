@@ -123,6 +123,15 @@ BOOL CPlayerDlg::OnInitDialog()
 
 	// TODO: 在此添加额外的初始化代码
 
+	CDlgSearch csDlg;
+	INT_PTR nRet = csDlg.DoModal();
+
+	if (nRet = IDOK)
+	{
+		nRet = nRet;
+	}
+	
+
 	{
 		m_pDlgShow = new CDlgShow;
 		if (m_pDlgShow != NULL)

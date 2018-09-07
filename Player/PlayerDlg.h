@@ -6,6 +6,7 @@
 #include "GetSysInfo.h"
 #include "PlayCtrl.h"
 #include "DlgShow.h"
+#include "DlgSearch.h"
 
 // CPlayerDlg ¶Ô»°¿ò
 class CPlayerDlg : public CDialogEx
