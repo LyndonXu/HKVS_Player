@@ -56,14 +56,17 @@ CPlayerDlg::CPlayerDlg(CWnd* pParent /*=NULL*/)
 	, m_u32SaveContinusTime(5)
 
 	, m_cswTitle(L"User Config")
-
+	
+	, m_pMyCamera(NULL)
 {
+	memset(&m_stDevList, 0, sizeof(MV_CC_DEVICE_INFO_LIST));
 	m_hIcon = AfxGetApp()->LoadIcon(IDR_MAINFRAME);
 }
 
 void CPlayerDlg::DoDataExchange(CDataExchange* pDX)
 {
 	CDialogEx::DoDataExchange(pDX);
+	DDX_Control(pDX, IDC_COMBO_DevList, m_csCBDevList);
 }
 
 BEGIN_MESSAGE_MAP(CPlayerDlg, CDialogEx)
@@ -79,15 +82,20 @@ BEGIN_MESSAGE_MAP(CPlayerDlg, CDialogEx)
 	ON_BN_CLICKED(IDC_BTN_LocalOpenClose, &CPlayerDlg::OnBnClickedBtnLocalopenclose)
 	ON_BN_CLICKED(IDC_BTN_FrameJump, &CPlayerDlg::OnBnClickedBtnFramejump)
 	ON_BN_CLICKED(IDC_BTN_FPSRateSet, &CPlayerDlg::OnBnClickedBtnFpsrateset)
+	ON_BN_CLICKED(IDC_BTN_DeviceSearch, &CPlayerDlg::OnBnClickedBtnDevicesearch)
+	ON_BN_CLICKED(IDC_BTN_DeviceOpenClose, &CPlayerDlg::OnBnClickedBtnDeviceopenclose)
+	ON_BN_CLICKED(IDC_BTN_DeviceCapture, &CPlayerDlg::OnBnClickedBtnDevicecapture)
+	ON_WM_HSCROLL()
 END_MESSAGE_MAP()
 
 
 
-static UINT s_uIndicators[] =
+static UINT s_uIndicators[CPlayerDlg::_StatusBar_Reserved] =
 {
 	CPlayerDlg::_StatusBar_CPU,
 	CPlayerDlg::_StatusBar_Memory,
 	CPlayerDlg::_StatusBar_NetInterface,
+	CPlayerDlg::_StatusBar_ErrorMessage,
 };
 
 // CPlayerDlg 消息处理程序
@@ -123,14 +131,17 @@ BOOL CPlayerDlg::OnInitDialog()
 
 	// TODO: 在此添加额外的初始化代码
 
-	CDlgSearch csDlg;
-	INT_PTR nRet = csDlg.DoModal();
-
-	if (nRet = IDOK)
 	{
-		nRet = nRet;
+		//CDlgSearch csDlg;
+		//INT_PTR nRet = csDlg.DoModal();
+
+		//if (nRet = IDOK)
+		//{
+		//	nRet = nRet;
+		//}
 	}
 	
+
 
 	{
 		m_pDlgShow = new CDlgShow;
@@ -177,11 +188,15 @@ BOOL CPlayerDlg::OnInitDialog()
 		m_csStatusBar.SetPaneInfo(_StatusBar_Memory,
 			s_uIndicators[_StatusBar_Memory], SBPS_NORMAL, 60);
 		m_csStatusBar.SetPaneInfo(_StatusBar_NetInterface,
-			s_uIndicators[_StatusBar_NetInterface], SBPS_NORMAL, 180);
+			s_uIndicators[_StatusBar_NetInterface], SBPS_NORMAL, 200);
+
+		m_csStatusBar.SetPaneInfo(_StatusBar_ErrorMessage,
+			s_uIndicators[_StatusBar_ErrorMessage], SBPS_NORMAL, 200);
 
 		m_csStatusBar.SetPaneText(_StatusBar_CPU, L"1", TRUE);
 		m_csStatusBar.SetPaneText(_StatusBar_Memory, L"2", TRUE);
 		m_csStatusBar.SetPaneText(_StatusBar_NetInterface, L"3", TRUE);
+		m_csStatusBar.SetPaneText(_StatusBar_ErrorMessage, L"4", TRUE);
 
 	}
 	//SetConfig();
@@ -262,6 +277,12 @@ HCURSOR CPlayerDlg::OnQueryDragIcon()
 BOOL CPlayerDlg::DestroyWindow()
 {
 	// TODO: 在此添加专用代码和/或调用基类
+
+	if (m_pMyCamera != NULL)
+	{
+		delete m_pMyCamera;
+		m_pMyCamera = NULL;
+	}
 
 	KillTimer(1);
 	KillTimer(2);
@@ -395,6 +416,109 @@ INT CPlayerDlg::GetConfig(void)
 	return 0;
 }
 
+void CPlayerDlg::ShowErrorMsg(wchar_t *pMsg, INT32 s32ErrorNo)
+{
+	CString csStrMsg;
+	if (s32ErrorNo == 0)
+	{
+		csStrMsg.Format(_T("%s"), pMsg);
+	}
+	else
+	{
+		csStrMsg.Format(_T("%s: Error = %x: "), pMsg, s32ErrorNo);
+	}
+
+	switch (s32ErrorNo)
+	{
+		case MV_E_HANDLE:
+		{
+			csStrMsg += L"Error or invalid handle ";                                         
+			break;
+		}
+		case MV_E_SUPPORT:
+		{
+			csStrMsg += L"Not supported function ";                                          
+			break;
+		}
+		case MV_E_BUFOVER:
+		{
+			csStrMsg += L"Cache is full ";                                                   
+			break;
+		}
+		case MV_E_CALLORDER:
+		{
+			csStrMsg += L"Function calling order error ";                                    
+			break;
+		}
+		case MV_E_PARAMETER:
+		{        csStrMsg += L"Incorrect parameter ";                                             
+			break;
+		}
+		case MV_E_RESOURCE:
+		{  
+			csStrMsg += L"Applying resource failed ";                                        
+			break;
+		}
+		case MV_E_NODATA:
+		{   
+			csStrMsg += L"No data ";                                                         
+			break;
+		}
+		case MV_E_PRECONDITION:
+		{   
+			csStrMsg += L"Precondition error, or running environment changed ";              
+			break;
+		}
+		case MV_E_VERSION:
+		{          csStrMsg += L"Version mismatches ";                                              
+			break;
+		}
+		case MV_E_NOENOUGH_BUF:
+		{   
+			csStrMsg += L"Insufficient memory ";                                             
+			break;
+		}
+		case MV_E_ABNORMAL_IMAGE:
+		{  
+			csStrMsg += L"Abnormal image, maybe incomplete image because of lost packet ";   
+			break;
+		}
+		case MV_E_UNKNOW:
+		{   
+			csStrMsg += L"Unknown error ";                                                   
+			break;
+		}
+		case MV_E_GC_GENERIC:
+		{   
+			csStrMsg += L"General error ";                                                   
+			break;
+		}
+		case MV_E_GC_ACCESS:
+		{   
+			csStrMsg += L"Node accessing condition error ";                                  
+			break;
+		}
+		case MV_E_ACCESS_DENIED:
+		{	
+			csStrMsg += L"No permission ";                                                   
+			break;
+		}
+		case MV_E_BUSY:
+		{   
+			csStrMsg += L"Device is busy, or network disconnected ";                         
+			break;
+		}
+		case MV_E_NETER:
+		{    
+			csStrMsg += L"Network error ";                                                   
+			break;
+		}
+	}
+
+	m_csStatusBar.SetPaneText(_StatusBar_ErrorMessage, csStrMsg, TRUE);
+}
+
+
 
 LRESULT CPlayerDlg::PlayCtrlMessage(WPARAM wMsg, LPARAM lData)
 {
@@ -468,6 +592,55 @@ LRESULT CPlayerDlg::PlayCtrlMessage(WPARAM wMsg, LPARAM lData)
 	}
 
 	return 0;
+}
+UINT64 GetUNIXTimeStampMS(void)
+{
+	SYSTEMTIME stSysTime;
+	GetLocalTime(&stSysTime);
+	CTime csTime(stSysTime);
+
+	__time64_t u64Time = csTime.GetTime();
+	u64Time = u64Time * 1000 + stSysTime.wMilliseconds;
+
+	return u64Time;
+}
+INT CPlayerDlg::SendFrame(const void *pData, MV_FRAME_OUT_INFO_EX* pFrameInfo)
+{
+	if (pData == NULL || pFrameInfo == NULL)
+	{
+		return -1;
+	}
+
+	if (pFrameInfo->enPixelType != PixelType_Gvsp_RGB8_Packed)
+	{
+		return -1;
+	}
+
+	//UINT64 u64TimeTmp = pFrameInfo->nDevTimeStampHigh;
+	//u64TimeTmp = (u64TimeTmp << 32) + pFrameInfo->nDevTimeStampLow;
+
+	//PRINT("u64TimeTmp: %lld\n", u64TimeTmp);
+	UINT64 u64TimeTmp = GetUNIXTimeStampMS();
+
+	StFrameHeader stFrameHeader = { 0 };
+	stFrameHeader.u32Header = FRAME_HEADER;
+	stFrameHeader.u16Width = pFrameInfo->nWidth;
+	stFrameHeader.u16Height = pFrameInfo->nHeight;
+
+	stFrameHeader.u32TimeStampHigh = (uint32_t)(u64TimeTmp >> 32);
+	stFrameHeader.u32TimeStampLow = (uint32_t)u64TimeTmp;
+
+
+	UINT32 u32Length = pFrameInfo->nFrameLen;
+
+	StParamV stParam[3] =
+	{
+		{ &stFrameHeader, sizeof(stFrameHeader) },
+		{ &u32Length, sizeof(UINT32) },
+		{ pData, u32Length },
+	};
+
+	return m_csPlayCtrl.SendShareData(stParam, 3, SHARE_DATA_RENDER | SHARE_DATA_SAVE);
 }
 
 
@@ -738,4 +911,318 @@ void CPlayerDlg::OnBnClickedBtnFpsrateset()
 	}
 
 	m_csPlayCtrl.SendLocalPlayMessage(_LocalPlay_Msg_ChangeRate, (void *)s32Rate);
+}
+
+
+INT CPlayerDlg::OpenDevice(void)
+{
+	int nIndex = m_csCBDevList.GetCurSel();
+	if ((nIndex < 0) | (nIndex >= MV_MAX_DEVICE_NUM))
+	{
+		ShowErrorMsg(TEXT("Please select device"), 0);
+		return STATUS_ERROR;
+	}
+
+	// ch:由设备信息创建设备实例 | en:Device instance created by device information
+	if (NULL == m_stDevList.pDeviceInfo[nIndex])
+	{
+		ShowErrorMsg(TEXT("Device does not exist"), 0);
+		return STATUS_ERROR;
+	}
+
+	if (NULL != m_pMyCamera)
+	{
+		return STATUS_ERROR;
+	}
+
+	m_pMyCamera = new CMyCamera;
+	if (NULL == m_pMyCamera)
+	{
+		return STATUS_ERROR;
+	}
+
+	int nRet = m_pMyCamera->Open(m_stDevList.pDeviceInfo[nIndex]);
+	if (MV_OK != nRet)
+	{
+		delete m_pMyCamera;
+		m_pMyCamera = NULL;
+		ShowErrorMsg(TEXT("Open Device fail!"), nRet);
+		return nRet;
+	}
+
+	// ch:探测网络最佳包大小(只对GigE相机有效) | en:Detection network optimal package size(It only works for the GigE camera)
+	if (m_stDevList.pDeviceInfo[nIndex]->nTLayerType == MV_GIGE_DEVICE)
+	{
+		int nPacketSize = m_pMyCamera->GetOptimalPacketSize();
+		if (nPacketSize > 0)
+		{
+			nRet = m_pMyCamera->SetIntValue("GevSCPSPacketSize", nPacketSize);
+			if (nRet != MV_OK)
+			{
+				ShowErrorMsg(TEXT("Warning: Set Packet Size fail!"), nRet);
+			}
+		}
+		else
+		{
+			ShowErrorMsg(TEXT("Warning: Get Packet Size fail!"), nPacketSize);
+		}
+	}
+
+	return MV_OK;
+}
+
+INT CPlayerDlg::CloseDevice(void)
+{
+	if (m_pMyCamera != NULL)
+	{
+		m_pMyCamera->Close();
+		delete m_pMyCamera;
+		m_pMyCamera = NULL;
+	}
+
+	return MV_OK;
+}
+
+void CPlayerDlg::OnBnClickedBtnDevicesearch()
+{
+	// TODO: 在此添加控件通知处理程序代码
+
+	CString strMsg;
+
+	// ch:清除设备列表框中的信息 | en:Clear Device List Information
+	m_csCBDevList.ResetContent();
+
+	// ch:初始化设备信息列表 | en:Device Information List Initialization
+	memset(&m_stDevList, 0, sizeof(MV_CC_DEVICE_INFO_LIST));
+
+	// ch:枚举子网内所有设备 | en:Enumerate all devices within subnet
+	int nRet = CMyCamera::EnumDevices(&m_stDevList);
+	if (MV_OK != nRet)
+	{
+		return;
+	}
+
+	// ch:将值加入到信息列表框中并显示出来 | en:Add value to the information list box and display
+	unsigned int i;
+	int nIp1, nIp2, nIp3, nIp4;
+	for (i = 0; i < m_stDevList.nDeviceNum; i++)
+	{
+		MV_CC_DEVICE_INFO* pDeviceInfo = m_stDevList.pDeviceInfo[i];
+		if (NULL == pDeviceInfo)
+		{
+			continue;
+		}
+		if (pDeviceInfo->nTLayerType == MV_GIGE_DEVICE)
+		{
+			nIp1 = ((m_stDevList.pDeviceInfo[i]->SpecialInfo.stGigEInfo.nCurrentIp & 0xff000000) >> 24);
+			nIp2 = ((m_stDevList.pDeviceInfo[i]->SpecialInfo.stGigEInfo.nCurrentIp & 0x00ff0000) >> 16);
+			nIp3 = ((m_stDevList.pDeviceInfo[i]->SpecialInfo.stGigEInfo.nCurrentIp & 0x0000ff00) >> 8);
+			nIp4 = (m_stDevList.pDeviceInfo[i]->SpecialInfo.stGigEInfo.nCurrentIp & 0x000000ff);
+
+			wchar_t* pUserName = NULL;
+			if (strcmp("", (LPCSTR)(pDeviceInfo->SpecialInfo.stGigEInfo.chUserDefinedName)) != 0)
+			{
+				DWORD dwLenUserName = MultiByteToWideChar(CP_ACP, 0, (LPCSTR)(pDeviceInfo->SpecialInfo.stGigEInfo.chUserDefinedName), -1, NULL, 0);
+				pUserName = new wchar_t[dwLenUserName];
+				MultiByteToWideChar(CP_ACP, 0, (LPCSTR)(pDeviceInfo->SpecialInfo.stGigEInfo.chUserDefinedName), -1, pUserName, dwLenUserName);
+			}
+			else
+			{
+				char strUserName[256] = { 0 };
+				sprintf_s(strUserName, "%s %s (%s)", pDeviceInfo->SpecialInfo.stGigEInfo.chManufacturerName,
+					pDeviceInfo->SpecialInfo.stGigEInfo.chModelName,
+					pDeviceInfo->SpecialInfo.stGigEInfo.chSerialNumber);
+				DWORD dwLenUserName = MultiByteToWideChar(CP_ACP, 0, (LPCSTR)(strUserName), -1, NULL, 0);
+				pUserName = new wchar_t[dwLenUserName];
+				MultiByteToWideChar(CP_ACP, 0, (LPCSTR)(strUserName), -1, pUserName, dwLenUserName);
+			}
+			strMsg.Format(_T("[%d]GigE:    %s  (%d.%d.%d.%d)"), i,
+				pUserName, nIp1, nIp2, nIp3, nIp4);
+			if (NULL != pUserName)
+			{
+				delete(pUserName);
+				pUserName = NULL;
+			}
+
+		}
+		else if (pDeviceInfo->nTLayerType == MV_USB_DEVICE)
+		{
+			wchar_t* pUserName = NULL;
+
+			if (strcmp("", (char*)pDeviceInfo->SpecialInfo.stUsb3VInfo.chUserDefinedName) != 0)
+			{
+				DWORD dwLenUserName = MultiByteToWideChar(CP_ACP, 0, (LPCSTR)(pDeviceInfo->SpecialInfo.stUsb3VInfo.chUserDefinedName), -1, NULL, 0);
+				pUserName = new wchar_t[dwLenUserName];
+				MultiByteToWideChar(CP_ACP, 0, (LPCSTR)(pDeviceInfo->SpecialInfo.stUsb3VInfo.chUserDefinedName), -1, pUserName, dwLenUserName);
+			}
+			else
+			{
+				char strUserName[256];
+				sprintf_s(strUserName, "%s %s (%s)", pDeviceInfo->SpecialInfo.stUsb3VInfo.chManufacturerName,
+					pDeviceInfo->SpecialInfo.stUsb3VInfo.chModelName,
+					pDeviceInfo->SpecialInfo.stUsb3VInfo.chSerialNumber);
+				DWORD dwLenUserName = MultiByteToWideChar(CP_ACP, 0, (LPCSTR)(strUserName), -1, NULL, 0);
+				pUserName = new wchar_t[dwLenUserName];
+				MultiByteToWideChar(CP_ACP, 0, (LPCSTR)(strUserName), -1, pUserName, dwLenUserName);
+			}
+			strMsg.Format(_T("[%d]UsbV3:  %s"), i, pUserName);
+			if (NULL != pUserName)
+			{
+				delete(pUserName);
+				pUserName = NULL;
+			}
+
+		}
+		else
+		{
+			ShowErrorMsg(TEXT("Unknown device enumerated"), 0);;
+		}
+		m_csCBDevList.AddString(strMsg);
+	}
+
+	if (0 == m_stDevList.nDeviceNum)
+	{
+		ShowErrorMsg(TEXT("No device"), 0);
+		return;
+	}
+	m_csCBDevList.SetCurSel(0);
+
+}
+
+
+void CPlayerDlg::OnBnClickedBtnDeviceopenclose()
+{
+	// TODO: 在此添加控件通知处理程序代码
+
+	CString csStr;
+	GetDlgItem(IDC_BTN_DeviceOpenClose)->GetWindowText(csStr);
+	if (csStr == L"打开")
+	{
+		if (OpenDevice() == MV_OK)
+		{
+			GetDlgItem(IDC_BTN_DeviceOpenClose)->SetWindowText(L"关闭");
+
+			LocalPlayWidgetEnable(1, FALSE);
+			DevicePlayWidgetEnable(1, TRUE);
+			ShowErrorMsg(TEXT(""), 0);
+		}
+	}
+	else
+	{
+		GetDlgItem(IDC_BTN_DeviceCapture)->GetWindowText(csStr);
+		if (csStr == L"停止采集")
+		{
+			if (m_pMyCamera != NULL)
+			{
+				m_pMyCamera->StopGrabbing();
+				m_csPlayCtrl.StopRender();
+				m_csPlayCtrl.StopSave();
+			}
+			GetDlgItem(IDC_BTN_DeviceCapture)->SetWindowText(L"开始采集");
+		}
+
+		CloseDevice();
+		GetDlgItem(IDC_BTN_DeviceOpenClose)->SetWindowText(L"打开");
+		DevicePlayWidgetEnable(0, FALSE);
+
+		LocalPlayWidgetEnable(1, TRUE);
+		LocalPlayWidgetEnable(0, FALSE);
+
+	}
+}
+
+
+void __stdcall ImageCallBack(unsigned char * pData, MV_FRAME_OUT_INFO_EX* pFrameInfo,
+	void* pUser)
+{
+	static bool boIsSave = false;
+	if (!boIsSave)
+	{
+		FILE *pFile = fopen("123.rgb", "wb+");
+		if (pFile != NULL)
+		{
+			fwrite(pData, 1, pFrameInfo->nWidth * pFrameInfo->nHeight * 3, pFile);
+			fclose(pFile);
+		}
+		boIsSave = true;
+	}
+	if (pUser != NULL)
+	{
+		((CPlayerDlg *)pUser)->SendFrame(pData, pFrameInfo);
+	}
+}
+
+void CPlayerDlg::OnBnClickedBtnDevicecapture()
+{
+	// TODO: 在此添加控件通知处理程序代码
+	CString csStr;
+	GetDlgItem(IDC_BTN_DeviceOpenClose)->GetWindowText(csStr);
+	if (csStr == L"打开")
+	{
+		return;
+	}
+
+	if (m_pMyCamera == NULL)
+	{
+		return;
+	}
+
+	GetDlgItem(IDC_BTN_DeviceCapture)->GetWindowText(csStr);
+
+	int nRet = 0;
+	if (csStr == L"开始采集")
+	{
+		nRet = m_pMyCamera->SetEnumValue("TriggerMode", MV_TRIGGER_MODE_OFF);
+		nRet = m_pMyCamera->RegisterImageCallBack(ImageCallBack, this);
+
+		nRet = m_pMyCamera->StartGrabbing();
+		if (nRet == MV_OK)
+		{
+			/* <TODO> */
+			m_csPlayCtrl.BeginSave();
+			m_csPlayCtrl.BeginRender(m_pDlgShow->GetDlgItem(IDC_STATIC_BigMovie)->
+				GetSafeHwnd());
+
+
+			GetDlgItem(IDC_BTN_DeviceCapture)->SetWindowText(L"停止采集");
+		}
+	}
+	else
+	{
+		nRet = m_pMyCamera->StopGrabbing();
+		if (nRet == MV_OK)
+		{
+			m_csPlayCtrl.StopRender();
+			m_csPlayCtrl.StopSave();
+
+			GetDlgItem(IDC_BTN_DeviceCapture)->SetWindowText(L"开始采集");
+		}
+	}
+}
+
+
+void CPlayerDlg::OnHScroll(UINT nSBCode, UINT nPos, CScrollBar* pScrollBar)
+{
+	// TODO: 在此添加消息处理程序代码和/或调用默认值
+
+	//PRINT("OnHscroll nSBCode: %d\n", nSBCode);
+
+	if (nSBCode == SB_THUMBTRACK )
+	{
+		PRINT("OnHscroll pos SB_THUMBTRACK : %d\n", nPos);
+	}
+	else if (nSBCode == SB_THUMBPOSITION)
+	{
+		PRINT("OnHscroll pos SB_THUMBPOSITION : %d\n", nPos);
+	}
+	else if (nSBCode == SB_ENDSCROLL)
+	{
+		PRINT("OnHscroll pos SB_ENDSCROLL : %d\n", nPos);
+	}
+	else
+	{
+		PRINT("OnHscroll nSBCode : %d\n", nSBCode);
+	}
+
+	CDialogEx::OnHScroll(nSBCode, nPos, pScrollBar);
 }

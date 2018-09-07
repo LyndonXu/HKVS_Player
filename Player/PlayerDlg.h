@@ -7,6 +7,9 @@
 #include "PlayCtrl.h"
 #include "DlgShow.h"
 #include "DlgSearch.h"
+#include "afxwin.h"
+
+#define STATUS_ERROR            -1
 
 // CPlayerDlg 对话框
 class CPlayerDlg : public CDialogEx
@@ -41,6 +44,9 @@ public:
 		_StatusBar_CPU,
 		_StatusBar_Memory,
 		_StatusBar_NetInterface,
+		_StatusBar_ErrorMessage,
+
+		_StatusBar_Reserved,
 	};
 
 private:
@@ -58,6 +64,11 @@ private:
 
 	wstring m_cswTitle;
 
+	CComboBox m_csCBDevList;
+
+	CMyCamera *m_pMyCamera;                // ch:CMyCamera封装了常用接口 | en:CMyCamera packed commonly used interface
+	MV_CC_DEVICE_INFO_LIST m_stDevList;         // ch:设备信息列表结构体变量，用来存储设备列表
+
 public:
 
 	virtual BOOL DestroyWindow();
@@ -70,14 +81,24 @@ public:
 
 	INT GetConfig(void);
 	INT SetConfig(void);
+	void ShowErrorMsg(wchar_t *pMsg, INT32 s32ErrorNo);
 
 	void LocalPlayWidgetEnable(UINT32 u32Level, BOOL boIsEnable = TRUE);
 	void DevicePlayWidgetEnable(UINT32 u32Level, BOOL boIsEnable = TRUE);
 
+	INT OpenDevice(void);
+	INT CloseDevice(void);
+
+	INT SendFrame(const void *pData, MV_FRAME_OUT_INFO_EX* pFrameInfo);
 
 	afx_msg void OnBnClickedBtnLocalopenclose();
 	afx_msg void OnBnClickedBtnFramejump();
 	afx_msg void OnBnClickedBtnFpsrateset();
+	afx_msg void OnBnClickedBtnDevicesearch();
+
+	afx_msg void OnBnClickedBtnDeviceopenclose();
+	afx_msg void OnBnClickedBtnDevicecapture();
+	afx_msg void OnHScroll(UINT nSBCode, UINT nPos, CScrollBar* pScrollBar);
 };
 
 #define PLAYCTRL_MSG		(WM_USER + 200)

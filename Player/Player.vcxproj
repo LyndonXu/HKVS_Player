@@ -92,9 +92,12 @@
       <Optimization>Disabled</Optimization>
       <PreprocessorDefinitions>WIN32;_WINDOWS;_DEBUG;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <SDLCheck>true</SDLCheck>
+      <AdditionalIncludeDirectories>$(MVCAM_COMMON_RUNENV)\Includes;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
+      <AdditionalLibraryDirectories>$(MVCAM_COMMON_RUNENV)\Libraries\win32;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>MvCameraControl.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <Midl>
       <MkTypLibCompatible>false</MkTypLibCompatible>
@@ -191,6 +194,7 @@
     <ClInclude Include="DlgSearch.h" />
     <ClInclude Include="DlgShow.h" />
     <ClInclude Include="GetSysInfo.h" />
+    <ClInclude Include="MyCamera.h" />
     <ClInclude Include="PlayCtrl.h" />
     <ClInclude Include="Player.h" />
     <ClInclude Include="PlayerDlg.h" />
@@ -204,6 +208,7 @@
     <ClCompile Include="DlgSearch.cpp" />
     <ClCompile Include="DlgShow.cpp" />
     <ClCompile Include="GetSysInfo.cpp" />
+    <ClCompile Include="MyCamera.cpp" />
     <ClCompile Include="PlayCtrl.cpp" />
     <ClCompile Include="Player.cpp" />
     <ClCompile Include="PlayerDlg.cpp" />

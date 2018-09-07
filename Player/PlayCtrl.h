@@ -3,6 +3,8 @@
 #include <set>
 
 #include "d3doffscreenrender.h"
+#include "MyCamera.h"
+
 
 using namespace std;
 
@@ -32,7 +34,7 @@ typedef struct _tagStFrameHeader
 
 typedef struct _tagStParamV
 {
-	void *pData;
+	const void *pData;
 	uint32_t u32Length;
 }StParamV;
 
@@ -217,6 +219,8 @@ private:
 
 	HWND m_hMsgWnd;
 	uint32_t m_u32MsgNumber;
+
+	//CMyCamera m_csCamDtrl;
 
 };
 
