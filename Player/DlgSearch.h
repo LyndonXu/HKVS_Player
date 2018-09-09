@@ -20,6 +20,8 @@ public:
 #endif
 
 protected:
+	HICON m_hIcon;
+
 	virtual void DoDataExchange(CDataExchange* pDX);    // DDX/DDV Ö§³Ö
 
 	DECLARE_MESSAGE_MAP()

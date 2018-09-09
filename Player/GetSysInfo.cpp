@@ -3,7 +3,7 @@
 
 #include <set>
 
-#include <timeapi.h>
+#include <MMSystem.h>
 
 #include "utils.h"
 #include "GetSysInfo.h"

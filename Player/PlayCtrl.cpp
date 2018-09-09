@@ -3,7 +3,7 @@
 #include <algorithm>
 
 #include <Windows.h>
-#include <timeapi.h>
+#include <MMSystem.h>
 #include "PlayCtrl.h"
 
 

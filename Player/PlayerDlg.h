@@ -126,6 +126,7 @@ public:
 
 	afx_msg void OnBnClickedBtnDeviceparamget();
 	afx_msg void OnBnClickedBtnDeviceparamset();
+	afx_msg void OnBnClickedBtnLocalset();
 };
 
 #define PLAYCTRL_MSG		(WM_USER + 200)

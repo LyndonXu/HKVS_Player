@@ -57,6 +57,9 @@
     <ClInclude Include="MyCamera.h">
       <Filter>头文件</Filter>
     </ClInclude>
+    <ClInclude Include="DlgLocalSet.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Player.cpp">
@@ -87,6 +90,9 @@
       <Filter>头文件</Filter>
     </ClCompile>
     <ClCompile Include="MyCamera.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="DlgLocalSet.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
   </ItemGroup>

@@ -140,12 +140,15 @@
       <Optimization>MaxSpeed</Optimization>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
-      <PreprocessorDefinitions>WIN32;_WINDOWS;NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>WIN32;_WINDOWS;NDEBUG;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>$(MVCAM_COMMON_RUNENV)\Includes;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
+      <AdditionalLibraryDirectories>$(MVCAM_COMMON_RUNENV)\Libraries\win32;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>MvCameraControl.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <Midl>
       <MkTypLibCompatible>false</MkTypLibCompatible>
@@ -191,6 +194,7 @@
   <ItemGroup>
     <ClInclude Include="colorspace.h" />
     <ClInclude Include="d3doffscreenrender.h" />
+    <ClInclude Include="DlgLocalSet.h" />
     <ClInclude Include="DlgSearch.h" />
     <ClInclude Include="DlgShow.h" />
     <ClInclude Include="GetSysInfo.h" />
@@ -205,6 +209,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="d3doffscreenrender.cpp" />
+    <ClCompile Include="DlgLocalSet.cpp" />
     <ClCompile Include="DlgSearch.cpp" />
     <ClCompile Include="DlgShow.cpp" />
     <ClCompile Include="GetSysInfo.cpp" />

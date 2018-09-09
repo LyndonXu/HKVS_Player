@@ -3,11 +3,11 @@
 //
 
 #include "stdafx.h"
-#include <timeapi.h>
+#include <MMSystem.h>
 #include "Player.h"
 #include "PlayerDlg.h"
 #include "afxdialogex.h"
-
+#include "DlgLocalSet.h"
 
 #include "utils.h"
 
@@ -104,6 +104,7 @@ BEGIN_MESSAGE_MAP(CPlayerDlg, CDialogEx)
 	ON_BN_CLICKED(IDC_BTN_LocalSearch, &CPlayerDlg::OnBnClickedBtnLocalsearch)
 	ON_BN_CLICKED(IDC_BTN_DeviceParamGet, &CPlayerDlg::OnBnClickedBtnDeviceparamget)
 	ON_BN_CLICKED(IDC_BTN_DeviceParamSet, &CPlayerDlg::OnBnClickedBtnDeviceparamset)
+	ON_BN_CLICKED(IDC_BTN_LocalSet, &CPlayerDlg::OnBnClickedBtnLocalset)
 END_MESSAGE_MAP()
 
 
@@ -166,13 +167,21 @@ BOOL CPlayerDlg::OnInitDialog()
 		CRect csClient;
 		GetClientRect(csClient);
 
+#ifdef _DEBUG
 		int s32Left = (s32Width - csClient.Width()) / 2 - 8;
 		int s32Top = 50 + 338;//s32Height - csClient.Height() - 60;
 		csClient.MoveToXY(s32Left, s32Top);
 		
 		csClient.right += 16;
 		csClient.bottom += 20;
-
+#else
+		int s32Left = (s32Width - csClient.Width()) / 2 - 3;
+		int s32Top = 50 + 338;//s32Height - csClient.Height() - 60;
+		csClient.MoveToXY(s32Left, s32Top);
+		
+		csClient.right += 6;
+		csClient.bottom += 20;
+#endif
 		::SetWindowPos(GetSafeHwnd(), NULL,//HWND_TOPMOST, 
 			csClient.left, csClient.top,
 			csClient.Width(), csClient.Height(),
@@ -1012,6 +1021,7 @@ void CPlayerDlg::OnHScroll(UINT nSBCode, UINT nPos, CScrollBar* pScrollBar)
 INT CPlayerDlg::SetConfig(void)
 {
 	wchar_t wcFileName[256] = { 0 };
+	CString csStrTmp;
 	DWORD dwRet = GetModuleFileName(NULL, wcFileName, 256);
 
 	if (dwRet != 0 && dwRet < 254)
@@ -1030,28 +1040,31 @@ INT CPlayerDlg::SetConfig(void)
 	WritePrivateProfileString(
 		_T("LocalSet")
 		, _T("SaveFolder")
-		, _T("F:\\SaveFolder")
+		, m_cswSaveFolder.c_str()
 		, wcFileName
 	);
+
+	csStrTmp.Format(L"%lldMB", m_u64FolderMaxSize);
 
 	WritePrivateProfileString(
 		_T("LocalSet")
 		, _T("FolderMaxSize")
-		, _T("20480MB")
+		, csStrTmp
 		, wcFileName
 	);
 
+	csStrTmp.Format(L"%dmin", m_u32SaveContinusTime);
 	WritePrivateProfileString(
 		_T("LocalSet")
 		, _T("SaveContinusTime")
-		, _T("5min")
+		, csStrTmp
 		, wcFileName
 	);
 
 	WritePrivateProfileString(
 		_T("LocalSet")
 		, _T("Title")
-		, _T("User config")
+		, m_cswTitle.c_str()
 		, wcFileName
 	);
 
@@ -1102,6 +1115,10 @@ INT CPlayerDlg::GetConfig(void)
 	Convert(wcValue, csStr);
 	PRINT("FolderMaxSize: %s\n", csStr.c_str());
 	swscanf(wcValue, L"%lldMB", &m_u64FolderMaxSize);
+	if (m_u64FolderMaxSize < 20 * 1024)
+	{
+		m_u64FolderMaxSize = 20 * 1024;
+	}
 
 	dwRet = GetPrivateProfileString(
 		_T("LocalSet")
@@ -1114,6 +1131,14 @@ INT CPlayerDlg::GetConfig(void)
 	Convert(wcValue, csStr);
 	PRINT("SaveContinusTime: %s\n", csStr.c_str());
 	swscanf(wcValue, L"%dmin", &m_u32SaveContinusTime);
+	if (m_u32SaveContinusTime < 1)
+	{
+		m_u32SaveContinusTime = 1;
+	}
+	else if (m_u32SaveContinusTime > 10)
+	{
+		m_u32SaveContinusTime = 10;
+	}
 
 	dwRet = GetPrivateProfileString(
 		_T("LocalSet")
@@ -1545,6 +1570,67 @@ void CPlayerDlg::OnBnClickedBtnDeviceparamset()
 	if (bIsSetSucceed)
 	{
 		ShowErrorMsg(TEXT("Set Parameter Succeed"), nRet);
+	}
+
+}
+
+
+void CPlayerDlg::OnBnClickedBtnLocalset()
+{
+	// TODO: 在此添加控件通知处理程序代码
+
+	CDlgLocalSet csDlg;
+	csDlg.m_csStrSaveFolder = m_cswSaveFolder.c_str();
+	csDlg.m_u32FolderSize = ((UINT)(m_u64FolderMaxSize / 1024));
+	csDlg.m_s32RecordContinusTime = m_u32SaveContinusTime - 1;
+	csDlg.m_csStrTitle = m_cswTitle.c_str();
+
+	int nRet = csDlg.DoModal();
+	if (nRet == IDOK)
+	{
+		nRet = nRet;
+	}
+
+	bool boNeedSaveConfig = false;
+
+	if ((UINT)(m_u64FolderMaxSize / 1024) != csDlg.m_u32FolderSize)
+	{
+		m_u64FolderMaxSize = csDlg.m_u32FolderSize;
+		m_u64FolderMaxSize *= 1024;
+	}
+
+	if (m_cswSaveFolder != csDlg.m_csStrSaveFolder.GetString())
+	{
+		m_cswSaveFolder = csDlg.m_csStrSaveFolder.GetString();
+		m_csPlayCtrl.SetFolder(m_cswSaveFolder.c_str());
+		boNeedSaveConfig = true;
+	}
+
+	if (csDlg.m_s32RecordContinusTime != (int)(m_u32SaveContinusTime - 1))
+	{
+		m_u32SaveContinusTime = csDlg.m_s32RecordContinusTime + 1;
+		if (m_u32SaveContinusTime < 1)
+		{
+			m_u32SaveContinusTime = 1;
+		}
+		else if (m_u32SaveContinusTime > 10)
+		{
+			m_u32SaveContinusTime = 10;
+		}
+
+		m_csPlayCtrl.SetSaveContinusTime(m_u32SaveContinusTime);
+		boNeedSaveConfig = true;
+	}
+
+	if (csDlg.m_csStrTitle != m_cswTitle.c_str())
+	{
+		m_cswTitle = csDlg.m_csStrTitle.GetString();
+		SetWindowText(csDlg.m_csStrTitle);
+		boNeedSaveConfig = true;
+	}
+
+	{
+		SetConfig();
 	}
 
 }

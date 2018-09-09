@@ -19,6 +19,7 @@ CDlgSearch::CDlgSearch(CWnd* pParent /*=NULL*/)
 	, m_csStrSelectItem(L"")
 {
 	m_pParent = pParent;
+	m_hIcon = AfxGetApp()->LoadIcon(IDR_MAINFRAME);
 }
 
 CDlgSearch::~CDlgSearch()
@@ -52,6 +53,10 @@ BOOL CDlgSearch::OnInitDialog()
 	CDialogEx::OnInitDialog();
 
 	// TODO:  在此添加额外的初始化
+	// 设置此对话框的图标。  当应用程序主窗口不是对话框时，框架将自动
+	//  执行此操作
+	SetIcon(m_hIcon, TRUE);			// 设置大图标
+	SetIcon(m_hIcon, FALSE);		// 设置小图标
 
 	__time64_t u64Time = _time64(NULL);
 
