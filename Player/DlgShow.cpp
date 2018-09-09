@@ -15,6 +15,7 @@ CDlgShow::CDlgShow(CWnd* pParent /*=NULL*/)
 	: CDialogEx(IDD_DLG_Show, pParent)
 	, m_pCreateWnd(NULL)
 {
+	m_hIcon = AfxGetApp()->LoadIcon(IDR_MAINFRAME);
 
 }
 
@@ -70,6 +71,11 @@ BOOL CDlgShow::OnInitDialog()
 	{
 		pSysMenu->EnableMenuItem(SC_CLOSE, MF_DISABLED);
 	}
+
+	SetIcon(m_hIcon, TRUE);			// 设置大图标
+	SetIcon(m_hIcon, FALSE);		// 设置小图标
+
+
 	int s32Width = GetSystemMetrics(SM_CXSCREEN);
 	//int s32Height = GetSystemMetrics(SM_CYSCREEN);
 	int s32Left = (s32Width - 600) / 2;

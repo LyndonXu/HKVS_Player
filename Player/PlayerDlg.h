@@ -33,6 +33,7 @@ protected:
 
 	// 生成的消息映射函数
 	virtual BOOL OnInitDialog();
+	virtual BOOL DestroyWindow();
 	afx_msg void OnSysCommand(UINT nID, LPARAM lParam);
 	afx_msg void OnPaint();
 	afx_msg HCURSOR OnQueryDragIcon();
@@ -64,24 +65,44 @@ private:
 
 	wstring m_cswTitle;
 
+	bool m_boIsSliderChangingByUser;
+	UINT32 m_u32ErrorTime;
+
 	CComboBox m_csCBDevList;
+
+	CString m_csLinkDevName;
 
 	CMyCamera *m_pMyCamera;                // ch:CMyCamera封装了常用接口 | en:CMyCamera packed commonly used interface
 	MV_CC_DEVICE_INFO_LIST m_stDevList;         // ch:设备信息列表结构体变量，用来存储设备列表
 
+	CEdit m_csEditExposure;
+	CEdit m_csEditGain;
+	CEdit m_csEditFPS;
+	double m_d64Exposure;
+	double m_d64Gain;
+	double m_d64FPS;
+
 public:
 
-	virtual BOOL DestroyWindow();
 	afx_msg void OnTimer(UINT_PTR nIDEvent);
 	afx_msg void OnBnClickedBtnNextframe();
 	afx_msg void OnBnClickedBtnPlaypause();
 	afx_msg void OnBnClickedBtnPrevframe();
+	afx_msg void OnBnClickedBtnLocalopenclose();
+	afx_msg void OnBnClickedBtnFramejump();
+	afx_msg void OnBnClickedBtnFpsrateset();
+	afx_msg void OnBnClickedBtnLocalsearch();
+
+	afx_msg void OnBnClickedBtnDevicesearch();
+	afx_msg void OnBnClickedBtnDeviceopenclose();
+	afx_msg void OnBnClickedBtnDevicecapture();
+	afx_msg void OnHScroll(UINT nSBCode, UINT nPos, CScrollBar* pScrollBar);
 
 	LRESULT PlayCtrlMessage(WPARAM wMsg, LPARAM lData);
 
 	INT GetConfig(void);
 	INT SetConfig(void);
-	void ShowErrorMsg(wchar_t *pMsg, INT32 s32ErrorNo);
+	void ShowErrorMsg(wchar_t *pMsg, INT32 s32ErrorNo = 0);
 
 	void LocalPlayWidgetEnable(UINT32 u32Level, BOOL boIsEnable = TRUE);
 	void DevicePlayWidgetEnable(UINT32 u32Level, BOOL boIsEnable = TRUE);
@@ -89,16 +110,22 @@ public:
 	INT OpenDevice(void);
 	INT CloseDevice(void);
 
+
+	int GetExposureTime(void);
+	int SetExposureTime(void);
+	int GetGain(void);
+	int SetGain(void);
+	int GetFrameRate(void);
+	int SetFrameRate(void);
+	int GetFrameFormat(void);
+	int SetFrameFormat(MvGvspPixelType emType);
+
 	INT SendFrame(const void *pData, MV_FRAME_OUT_INFO_EX* pFrameInfo);
+	INT SearchSaveFolder(uint64_t u64TimeBegin, uint64_t u64TimeEnd,
+		PFUN_SearchSaveFolderCB pFunCB, void *pContext);
 
-	afx_msg void OnBnClickedBtnLocalopenclose();
-	afx_msg void OnBnClickedBtnFramejump();
-	afx_msg void OnBnClickedBtnFpsrateset();
-	afx_msg void OnBnClickedBtnDevicesearch();
-
-	afx_msg void OnBnClickedBtnDeviceopenclose();
-	afx_msg void OnBnClickedBtnDevicecapture();
-	afx_msg void OnHScroll(UINT nSBCode, UINT nPos, CScrollBar* pScrollBar);
+	afx_msg void OnBnClickedBtnDeviceparamget();
+	afx_msg void OnBnClickedBtnDeviceparamset();
 };
 
 #define PLAYCTRL_MSG		(WM_USER + 200)

@@ -419,7 +419,7 @@ uint32_t CPlayCtrl::AddFileToList(wstring &csStrFileNameBackup, uint64_t u64File
 		if (m_hMsgWnd != NULL)
 		{
 			PostMessage(m_hMsgWnd, m_u32MsgNumber, _WND_Msg_FoldSize,
-				(LPARAM)((m_u64RecordFileTotalSize + 1024 * 1023) / (1024 * 1024)));
+				(LPARAM)((m_u64RecordFileTotalSize + 1024 * 512) / (1024 * 1024)));
 		}
 
 		ReleaseMutex(m_hFileListMutex);
@@ -598,7 +598,7 @@ int32_t CPlayCtrl::BeginLocalPlay(const TCHAR *pFileName)
 		}
 		StopLocalPlay();
 	}
-
+	m_csStrLocalPlayFile = L"";
 	m_hLocalFile = CreateFile(pFileName, GENERIC_READ,
 		FILE_SHARE_READ,
 		NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
@@ -607,6 +607,7 @@ int32_t CPlayCtrl::BeginLocalPlay(const TCHAR *pFileName)
 		return -1;
 	}
 
+	m_csStrLocalPlayFile = pFileName;
 	m_boIsLocalPlayThreadExit = false;
 
 	m_hSemForLocalPlayThread = CreateSemaphore(NULL, 0, 20, NULL);
@@ -682,6 +683,11 @@ uint32_t CPlayCtrl::LocalPlayThread()
 			break;
 		}
 
+		if (GetFrameHeaderCheckSum(&(stIndex.stHeader), true) != 0)
+		{
+			break;
+		}
+
 		u64ReadPos += dwReadLen;
 
 		if (stIndex.stHeader.u32Header != FRAME_HEADER)
@@ -732,6 +738,10 @@ uint32_t CPlayCtrl::LocalPlayThread()
 			CloseHandle(m_hLocalFile);
 			m_hLocalFile = NULL;
 		}
+		if (m_hMsgWnd != NULL)
+		{
+			PostMessage(m_hMsgWnd, m_u32MsgNumber, _WND_Msg_LocalPlayOut, 0);
+		}
 		return -1;
 	}
 
@@ -768,6 +778,10 @@ uint32_t CPlayCtrl::LocalPlayThread()
 	if (m_hMsgWnd != NULL)
 	{
 		PostMessage(m_hMsgWnd, m_u32MsgNumber, _WND_Msg_PlayMode, u32PlayMode);
+
+		wchar_t *pStr = (wchar_t *)calloc(1, (m_csStrLocalPlayFile.length() + 4) * sizeof(wchar_t));
+		wcscpy(pStr, m_csStrLocalPlayFile.c_str());
+		PostMessage(m_hMsgWnd, m_u32MsgNumber, _WND_Msg_ShowName, (LPARAM)pStr);
 	}
 
 	while (!m_boIsLocalPlayThreadExit)
@@ -995,6 +1009,10 @@ uint32_t CPlayCtrl::LocalPlayThread()
 	{
 	}
 
+	if (m_hMsgWnd != NULL)
+	{
+		PostMessage(m_hMsgWnd, m_u32MsgNumber, _WND_Msg_LocalPlayOut, 0);
+	}
 	return 0;
 }
 
@@ -1384,7 +1402,7 @@ int64_t CPlayCtrl::GetRecordFolderSizeAndList()
 	if (m_hMsgWnd != NULL)
 	{
 		PostMessage(m_hMsgWnd, m_u32MsgNumber, _WND_Msg_FoldSize,
-			(LPARAM)((m_u64RecordFileTotalSize + 1024 * 1023) / (1024 * 1024)));
+			(LPARAM)((m_u64RecordFileTotalSize + 1024 * 512) / (1024 * 1024)));
 	}
 
 	return 0;
@@ -1428,9 +1446,108 @@ int32_t CPlayCtrl::ReduceFolderSize(uint64_t u64ExpectSize)
 	if (m_hMsgWnd != NULL)
 	{
 		PostMessage(m_hMsgWnd, m_u32MsgNumber, _WND_Msg_FoldSize,
-			(LPARAM)((m_u64RecordFileTotalSize + 1024 * 1023) / (1024 * 1024)));
+			(LPARAM)((m_u64RecordFileTotalSize + 1024 * 512) / (1024 * 1024)));
 	}
 
 	return 0;
 }
 
+
+namespace std
+{
+	bool operator < (const StRecoderFileInfo &Left, wchar_t *pRight)
+	{
+		return Left.cwStrName < pRight;
+	}
+	bool operator < (wchar_t *pLeft, const StRecoderFileInfo &Right )
+	{
+		wstring csStr = pLeft;
+		return csStr < Right.cwStrName;
+	}
+}
+
+int32_t CPlayCtrl::SearchSaveFolder(uint64_t u64TimeBegin, uint64_t u64TimeEnd,
+	PFUN_SearchSaveFolderCB pFunCB, void *pContext)
+{
+	if (m_hFileListMutex == NULL)
+	{
+		return -1;
+	}
+
+	if (u64TimeEnd < u64TimeBegin)
+	{
+		return -1;
+	}
+
+	wchar_t wcStrBegin[128];
+	wchar_t wcStrEnd[128];
+
+	tm stTime = { 0 };
+	_localtime64_s(&stTime, (__time64_t *)(&u64TimeBegin));
+	swprintf_s(wcStrBegin, 128, L"%04d-%02d-%02d %02d-%02d-%02d",
+		stTime.tm_year + 1900,
+		stTime.tm_mon + 1,
+		stTime.tm_mday,
+		stTime.tm_hour,
+		stTime.tm_min,
+		stTime.tm_sec);
+
+	_localtime64_s(&stTime, (__time64_t *)(&u64TimeEnd));
+	swprintf_s(wcStrEnd, 128, L"%04d-%02d-%02d %02d-%02d-%02d",
+		stTime.tm_year + 1900,
+		stTime.tm_mon + 1,
+		stTime.tm_mday,
+		stTime.tm_hour,
+		stTime.tm_min,
+		stTime.tm_sec);
+
+
+	if (WaitForSingleObject(m_hFileListMutex, 1000) != WAIT_OBJECT_0)
+	{
+		return -1;
+	}
+
+	wchar_t *pStr = wcStrBegin;	
+	CRecoderFileListIter iterBegin;
+	CRecoderFileListIter iterEnd;
+
+	pair<CRecoderFileListIter, CRecoderFileListIter> csPair;
+	csPair = equal_range(m_csRecordFileList.begin(), m_csRecordFileList.end(), pStr);
+
+	if (csPair.first == csPair.second)	/* begin or end */
+	{
+		if (csPair.first == m_csRecordFileList.end())
+		{
+			ReleaseMutex(m_hFileListMutex);
+			return -1;
+		}
+	}
+	iterBegin = csPair.second;
+
+	pStr = wcStrEnd;
+	csPair = equal_range(m_csRecordFileList.begin(), m_csRecordFileList.end(), pStr);
+	if (csPair.first == csPair.second)	/* begin or end */
+	{
+		if (csPair.first == m_csRecordFileList.begin())
+		{
+			if (iterBegin != m_csRecordFileList.begin())
+			{
+				ReleaseMutex(m_hFileListMutex);
+				return -1;
+			}
+		}
+	}
+	iterEnd = csPair.first;
+
+	if (pFunCB != NULL)
+	{
+		for (CRecoderFileListIter iter = iterBegin; iter != iterEnd; iter++)
+		{
+			pFunCB((&(*iter)), pContext);
+		}
+	}
+
+	ReleaseMutex(m_hFileListMutex);
+
+	return 0;
+}

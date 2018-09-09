@@ -109,9 +109,10 @@ INT32 CGetSysInfo::GetNetworkInfo(UINT32 &u32InterfaceCount)
 
 		while (pAdapter != NULL)
 		{
-			if ((pAdapter->Type == MIB_IF_TYPE_ETHERNET) ||
-				(pAdapter->Type == MIB_IF_TYPE_PPP) || 
-				(pAdapter->Type == IF_TYPE_IEEE80211))
+			//if ((pAdapter->Type == MIB_IF_TYPE_ETHERNET) ||
+			//	(pAdapter->Type == MIB_IF_TYPE_PPP) || 
+			//	(pAdapter->Type == IF_TYPE_IEEE80211))
+			if (pAdapter->Type == MIB_IF_TYPE_ETHERNET)
 			{
 				MIB_IFROW  stIfRow = {0};
 				DWORD dwSize = sizeof(PMIB_IFROW);

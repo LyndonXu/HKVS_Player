@@ -105,6 +105,8 @@ enum
 	_WND_Msg_LocalPlayFileIndexSize,			/* LPRARM: Index Size */
 	_WND_Msg_LocalPlayFileCurIndex,				/* LPRARM: Current play Index */
 	_WND_Msg_ShowRectInvalidate,				/* NULL */
+	_WND_Msg_ShowName,							/* LPRARM: wchat * */
+	_WND_Msg_LocalPlayOut,						/* NULL */
 };
 
 enum
@@ -142,6 +144,7 @@ typedef set<StLocalPlayIndex>::reverse_iterator CLocalPlayIndexRIter;
 typedef set<StRecoderFileInfo> CRecoderFileList;
 typedef set<StRecoderFileInfo>::iterator CRecoderFileListIter;
 
+typedef int32_t(*PFUN_SearchSaveFolderCB)(const StRecoderFileInfo *pInfo, void *pContext);
 
 class CPlayCtrl
 {
@@ -176,6 +179,7 @@ public:
 
 	int64_t GetRecordFolderSizeAndList();
 	int32_t ReduceFolderSize(uint64_t u64ExpectSize);/* MB */
+	int32_t SearchSaveFolder(uint64_t u64TimeBegin, uint64_t u64TimeEnd, PFUN_SearchSaveFolderCB pFunCB, void *pContext);
 
 	friend int32_t GetFolderSizeCB(const wchar_t *pName, WIN32_FIND_DATA *pInfo, void *pContext);
 

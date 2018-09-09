@@ -24,13 +24,21 @@ protected:
 
 	DECLARE_MESSAGE_MAP()
 public:
-	afx_msg void OnBnClickedOk();
 	virtual BOOL OnInitDialog();
 	virtual BOOL DestroyWindow();
+	afx_msg void OnBnClickedOk();
+	afx_msg void OnBnClickedBtnSearch();
+	afx_msg void OnNMDblclkListSearchresult(NMHDR *pNMHDR, LRESULT *pResult);
+
+
+	void ListInsterItem(const wchar_t *pStr, UINT64 u64Size = 0);
+
 	CDateTimeCtrl m_csDTCSearchBegin;
 	CDateTimeCtrl m_csDTCSearchEnd;
 	CTime m_csTimeSearchBegin;
 	CTime m_csTimeSearchEnd;
 	CListCtrl m_csListSearchResult;
-	afx_msg void OnNMDblclkListSearchresult(NMHDR *pNMHDR, LRESULT *pResult);
+
+	CWnd *m_pParent;
+	CString m_csStrSelectItem;
 };
