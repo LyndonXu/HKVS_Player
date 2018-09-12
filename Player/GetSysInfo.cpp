@@ -51,6 +51,7 @@ INT32 CGetSysInfo::GetCpuIdle(UINT32 &u32Idle)
 	}
 	else
 	{
+		u32Idle = 100;
 		return -1;
 	}
 
@@ -147,12 +148,29 @@ INT32 CGetSysInfo::GetNetworkInfo(UINT32 &u32InterfaceCount)
 
 							if (u32TimeDiff != 0)
 							{
-								iter->second.u32InSpeed = (UINT32)((stIfRow.dwInOctets * 8 - iter->second.u64PreInByte) * 1000 / u32TimeDiff);
-								iter->second.u32OutSpeed = (UINT32)((stIfRow.dwOutOctets * 8 - iter->second.u64PreOutByte) * 1000 / u32TimeDiff);
+								UINT64 u64Tmp = stIfRow.dwInOctets;
+								u64Tmp *= 8;
+								if (u64Tmp < iter->second.u64PreInByte)
+								{
+									UINT64 u64Carry = UINT32_MAX;
+									u64Tmp = u64Carry * 8 + u64Tmp;
+								}
+								iter->second.u32InSpeed = (UINT32)((u64Tmp - iter->second.u64PreInByte) * 1000 / u32TimeDiff);
+
+
+								u64Tmp = stIfRow.dwOutOctets;
+								u64Tmp *= 8;
+								if (u64Tmp < iter->second.u64PreOutByte)
+								{
+									UINT64 u64Carry = UINT32_MAX;
+									u64Tmp = u64Carry * 8 + u64Tmp;
+								}
+
+								iter->second.u32OutSpeed = (UINT32)((u64Tmp - iter->second.u64PreOutByte) * 1000 / u32TimeDiff);
 							}
 
-							iter->second.u64PreInByte = stIfRow.dwInOctets * 8;
-							iter->second.u64PreOutByte = stIfRow.dwOutOctets * 8;
+							iter->second.u64PreInByte = (UINT64)stIfRow.dwInOctets * 8;
+							iter->second.u64PreOutByte = (UINT64)stIfRow.dwOutOctets * 8;
 						}
 					}
 				}

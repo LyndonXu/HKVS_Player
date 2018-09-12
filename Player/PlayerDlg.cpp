@@ -544,9 +544,9 @@ void CPlayerDlg::OnTimer(UINT_PTR nIDEvent)
 		{
 			for (INT j = 0; j < 3; j++)
 			{
-				if (u32Speed[i] > 1024)
+				if (u32Speed[i] > 1000)
 				{
-					u32Speed[i] = (u32Speed[i] + 512) / 1024;
+					u32Speed[i] = (u32Speed[i] + 500) / 1000;
 					u32SpeedUnit[i] = j + 1;
 				}
 			}
