@@ -322,9 +322,9 @@ LRESULT CPlayerDlg::PlayCtrlMessage(WPARAM wMsg, LPARAM lData)
 			UINT64 u64Size = lData;
 			//u64Size *= (1024 * 1024);
 			TRACE(L"FoldSize: %lld MB\n", u64Size);
-			if (u64Size > 20 * 1024)/* 20GB */
+			if (u64Size > m_u64FolderMaxSize)/* 20GB */
 			{
-				m_csPlayCtrl.ReduceFolderSize(20 * 1024);
+				m_csPlayCtrl.ReduceFolderSize(m_u64FolderMaxSize);
 			}
 			break;
 		}
@@ -1113,12 +1113,12 @@ INT CPlayerDlg::GetConfig(void)
 	);
 
 	Convert(wcValue, csStr);
-	PRINT("FolderMaxSize: %s\n", csStr.c_str());
 	swscanf(wcValue, L"%lldMB", &m_u64FolderMaxSize);
 	if (m_u64FolderMaxSize < 20 * 1024)
 	{
 		m_u64FolderMaxSize = 20 * 1024;
 	}
+	PRINT("FolderMaxSize: %lldMB\n", m_u64FolderMaxSize);
 
 	dwRet = GetPrivateProfileString(
 		_T("LocalSet")
@@ -1129,7 +1129,6 @@ INT CPlayerDlg::GetConfig(void)
 	);
 
 	Convert(wcValue, csStr);
-	PRINT("SaveContinusTime: %s\n", csStr.c_str());
 	swscanf(wcValue, L"%dmin", &m_u32SaveContinusTime);
 	if (m_u32SaveContinusTime < 1)
 	{
@@ -1139,6 +1138,7 @@ INT CPlayerDlg::GetConfig(void)
 	{
 		m_u32SaveContinusTime = 10;
 	}
+	PRINT("SaveContinusTime: %d\n", m_u32SaveContinusTime);
 
 	dwRet = GetPrivateProfileString(
 		_T("LocalSet")

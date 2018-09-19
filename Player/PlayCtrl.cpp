@@ -436,7 +436,8 @@ uint32_t CPlayCtrl::SaveThread()
 
 
 	CShareMemCtrl *pCtrl = NULL;
-	HANDLE hFile = NULL;
+	//HANDLE hFile = NULL;
+	FILE *pFile = NULL;
 	uint64_t u64BeginTime = 0;
 	uint64_t u64FrameCount = 0;
 
@@ -445,69 +446,99 @@ uint32_t CPlayCtrl::SaveThread()
 
 	while (!m_boIsSaveThreadExit)
 	{
-		if (pCtrl != NULL)
+		try
 		{
-			void *pData = NULL;
-			uint32_t u32Length = 0;
-			uint64_t u64CurTime = 0;
-			if (pCtrl->GetShareMem(pData, u32Length) == 0)
+
+			if (pCtrl != NULL)
 			{
-				StFrameHeader *pHeader = (StFrameHeader *)pData;
-				u64CurTime = pHeader->u32TimeStampHigh;
-				u64CurTime = (u64CurTime << 32) + pHeader->u32TimeStampLow;
-				if (hFile == NULL)
+				void *pData = NULL;
+				uint32_t u32Length = 0;
+				uint64_t u64CurTime = 0;
+				if (pCtrl->GetShareMem(pData, u32Length) == 0)
 				{
-					wchar_t wcName[256];
-					SYSTEMTIME stSysTime = { 0 };
-					GetLocalTime(&stSysTime);
-
-					swprintf_s(wcName, 256, L"%04d-%02d-%02d %02d-%02d-%02d_%03d.dat",
-						stSysTime.wYear,
-						stSysTime.wMonth,
-						stSysTime.wDay,
-						stSysTime.wHour,
-						stSysTime.wMinute,
-						stSysTime.wSecond,
-						stSysTime.wMilliseconds);
-					
-					csStrFileNameBackup = wcName;
-					u64FileSize = 0;
-
-					wstring wcStrAbsName = m_csStrSaveFolder;
-					wcStrAbsName.append(L"\\");
-					wcStrAbsName.append(wcName);
-
-					hFile = CreateFile(wcStrAbsName.c_str(), 
-						GENERIC_WRITE | GENERIC_READ,
-						FILE_SHARE_READ,
-						NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
-					u64BeginTime = u64CurTime;
-				}
-
-				if (hFile != NULL)
-				{
-					if (u64CurTime >=  u64BeginTime)
+					StFrameHeader *pHeader = (StFrameHeader *)pData;
+					u64CurTime = pHeader->u32TimeStampHigh;
+					u64CurTime = (u64CurTime << 32) + pHeader->u32TimeStampLow;
+					//if (hFile == NULL)
+					if (pFile == NULL)
 					{
-						WriteFile(hFile, pData, u32Length, NULL, NULL);
-						u64FileSize += u32Length;
-						u64FrameCount++;
+						wchar_t wcName[256];
+						SYSTEMTIME stSysTime = { 0 };
+						GetLocalTime(&stSysTime);
 
-						if ((u64CurTime - u64BeginTime) > (uint64_t)m_u32SaveContinueTime)
+						swprintf_s(wcName, 256, L"%04d-%02d-%02d %02d-%02d-%02d_%03d.dat",
+							stSysTime.wYear,
+							stSysTime.wMonth,
+							stSysTime.wDay,
+							stSysTime.wHour,
+							stSysTime.wMinute,
+							stSysTime.wSecond,
+							stSysTime.wMilliseconds);
+
+						csStrFileNameBackup = wcName;
+						u64FileSize = 0;
+
+						wstring wcStrAbsName = m_csStrSaveFolder;
+						wcStrAbsName.append(L"\\");
+						wcStrAbsName.append(wcName);
+
+						//hFile = CreateFile(wcStrAbsName.c_str(),
+						//	GENERIC_WRITE,
+						//	FILE_SHARE_WRITE,
+						//	NULL, CREATE_ALWAYS, 0, NULL);
+						errno_t err = _wfopen_s(&pFile, wcStrAbsName.c_str(), L"wb+");
+						if (err == 0)
 						{
-							CloseHandle(hFile);
-							hFile = NULL;
-							AddFileToList(csStrFileNameBackup, u64FileSize);
+						}
+						else
+						{
+							PRINT("open file error\n");
+						}
+						
+						u64BeginTime = u64CurTime;
+					}
 
-							csStrFileNameBackup = L"";
-							u64FileSize = 0;
+					//if (hFile != NULL)
+					if (pFile != NULL)
+					{
+						if (u64CurTime >= u64BeginTime)
+						{
+							//PRINT("pre write: %d\n", u32Length);
+							
+							//WriteFile(hFile, pData, u32Length, NULL, NULL);
+							fwrite(pData, 1, u32Length, pFile);
+							
+							//PRINT("end write: %d\n", u32Length)
+							u64FileSize += u32Length;
+							u64FrameCount++;
+
+							if ((u64CurTime - u64BeginTime) > (uint64_t)m_u32SaveContinueTime)
+							{
+								//PRINT("diff %lld, continue %d\n", u64CurTime - u64BeginTime, m_u32SaveContinueTime);
+								
+								//CloseHandle(hFile);
+								//hFile = NULL;
+								
+								fclose(pFile);
+								pFile = NULL;
+
+								AddFileToList(csStrFileNameBackup, u64FileSize);
+
+								csStrFileNameBackup = L"";
+								u64FileSize = 0;
+							}
 						}
 					}
+
 				}
 
+				ReleaseShareData(pCtrl);
+				pCtrl = NULL;
 			}
-
-			ReleaseShareData(pCtrl);
-			pCtrl = NULL;
+		}
+		catch (const std::exception&)
+		{
+			PRINT("exception\n");
 		}
 		WaitForSingleObject(m_hSemForSaveThread, 10);
 
@@ -517,17 +548,29 @@ uint32_t CPlayCtrl::SaveThread()
 			{
 				if (pCtrl != NULL)
 				{
-					PRINT("loss frame!!\n")
-					ReleaseShareData(pCtrl);
+					try
+					{
+						PRINT("loss frame!!\n")
+						ReleaseShareData(pCtrl);
+					}
+					catch (const std::exception&)
+					{
+						PRINT("exception\n")
+					}
 				}
 				pCtrl = (CShareMemCtrl *)stMsg.wParam;
 			}
 		}
 	}
-	if (hFile != NULL)
+	//if (hFile != NULL)
+	//{
+	//	CloseHandle(hFile);
+	//	hFile = NULL;
+
+	if (pFile != NULL)
 	{
-		CloseHandle(hFile);
-		hFile = NULL;
+		fclose(pFile);
+		pFile = NULL;
 
 		AddFileToList(csStrFileNameBackup, u64FileSize);
 
