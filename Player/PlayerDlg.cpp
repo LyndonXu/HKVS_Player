@@ -72,6 +72,12 @@ CPlayerDlg::CPlayerDlg(CWnd* pParent /*=NULL*/)
 	m_hIcon = AfxGetApp()->LoadIcon(IDR_MAINFRAME);
 }
 
+CPlayerDlg::~CPlayerDlg()
+{
+	DestroyWindow();
+}
+
+
 void CPlayerDlg::DoDataExchange(CDataExchange* pDX)
 {
 	CDialogEx::DoDataExchange(pDX);
@@ -105,17 +111,11 @@ BEGIN_MESSAGE_MAP(CPlayerDlg, CDialogEx)
 	ON_BN_CLICKED(IDC_BTN_DeviceParamGet, &CPlayerDlg::OnBnClickedBtnDeviceparamget)
 	ON_BN_CLICKED(IDC_BTN_DeviceParamSet, &CPlayerDlg::OnBnClickedBtnDeviceparamset)
 	ON_BN_CLICKED(IDC_BTN_LocalSet, &CPlayerDlg::OnBnClickedBtnLocalset)
+	ON_BN_CLICKED(IDC_BTN_HIDE, &CPlayerDlg::OnBnClickedBtnHide)
+	ON_WM_CLOSE()
 END_MESSAGE_MAP()
 
 
-
-static UINT s_uIndicators[CPlayerDlg::_StatusBar_Reserved] =
-{
-	CPlayerDlg::_StatusBar_CPU,
-	CPlayerDlg::_StatusBar_Memory,
-	CPlayerDlg::_StatusBar_NetInterface,
-	CPlayerDlg::_StatusBar_ErrorMessage,
-};
 
 // CPlayerDlg 消息处理程序
 
@@ -141,6 +141,8 @@ BOOL CPlayerDlg::OnInitDialog()
 			pSysMenu->AppendMenu(MF_SEPARATOR);
 			pSysMenu->AppendMenu(MF_STRING, IDM_ABOUTBOX, strAboutMenu);
 		}
+		
+		pSysMenu->EnableMenuItem(SC_CLOSE, MF_DISABLED);
 	}
 
 	// 设置此对话框的图标。  当应用程序主窗口不是对话框时，框架将自动
@@ -150,7 +152,7 @@ BOOL CPlayerDlg::OnInitDialog()
 
 	// TODO: 在此添加额外的初始化代码
 
-
+#if 0
 	{
 		m_pDlgShow = new CDlgShow;
 		if (m_pDlgShow != NULL)
@@ -160,6 +162,7 @@ BOOL CPlayerDlg::OnInitDialog()
 			m_pDlgShow->ShowWindow(SW_SHOW);
 		}
 	}
+#endif
 	{
 		int s32Width = GetSystemMetrics(SM_CXSCREEN);
 		//int s32Height = GetSystemMetrics(SM_CYSCREEN);
@@ -173,14 +176,14 @@ BOOL CPlayerDlg::OnInitDialog()
 		csClient.MoveToXY(s32Left, s32Top);
 		
 		csClient.right += 16;
-		csClient.bottom += 20;
+		csClient.bottom += 32;
 #else
 		int s32Left = (s32Width - csClient.Width()) / 2 - 3;
 		int s32Top = 50 + 338;//s32Height - csClient.Height() - 60;
 		csClient.MoveToXY(s32Left, s32Top);
 		
 		csClient.right += 6;
-		csClient.bottom += 20;
+		csClient.bottom += 32;
 #endif
 		::SetWindowPos(GetSafeHwnd(), NULL,//HWND_TOPMOST, 
 			csClient.left, csClient.top,
@@ -189,49 +192,28 @@ BOOL CPlayerDlg::OnInitDialog()
 	}
 
 
-	{
-		CRect csRect;
-
-		GetClientRect(csRect);
-
-		m_csStatusBar.Create(this);
-
-		m_csStatusBar.SetIndicators(s_uIndicators, sizeof(s_uIndicators) / sizeof(UINT));
-
-		m_csStatusBar.MoveWindow(0, csRect.bottom - 20, csRect.right, 20);
-		m_csStatusBar.SetPaneInfo(_StatusBar_CPU,
-			s_uIndicators[_StatusBar_CPU], SBPS_NORMAL, 60);
-		m_csStatusBar.SetPaneInfo(_StatusBar_Memory,
-			s_uIndicators[_StatusBar_Memory], SBPS_NORMAL, 60);
-		m_csStatusBar.SetPaneInfo(_StatusBar_NetInterface,
-			s_uIndicators[_StatusBar_NetInterface], SBPS_NORMAL, 200);
-
-		m_csStatusBar.SetPaneInfo(_StatusBar_ErrorMessage,
-			s_uIndicators[_StatusBar_ErrorMessage], SBPS_NORMAL, 200);
-
-		m_csStatusBar.SetPaneText(_StatusBar_CPU, L"1", TRUE);
-		m_csStatusBar.SetPaneText(_StatusBar_Memory, L"2", TRUE);
-		m_csStatusBar.SetPaneText(_StatusBar_NetInterface, L"3", TRUE);
-		m_csStatusBar.SetPaneText(_StatusBar_ErrorMessage, L"4", TRUE);
-
-	}
 	//SetConfig();
 	GetConfig();
 
 	SetTimer(1, 1000, NULL);
 
-	//SetTimer(2, 40, NULL);
-
-	SetWindowText(m_cswTitle.c_str());
+	if (m_pDlgShow != NULL)
+	{
+		m_pDlgShow->SetWindowText(m_cswTitle.c_str());
+	}
 	m_csPlayCtrl.RegisterWNDMsg(GetSafeHwnd(), PLAYCTRL_MSG);
 	m_csPlayCtrl.SetFolder(m_cswSaveFolder.c_str());
 	m_csPlayCtrl.SetSaveContinusTime(m_u32SaveContinusTime);
+
+#if 0
+	SetTimer(2, 40, NULL);
 	if (m_pDlgShow != NULL)
 	{
-		//m_csPlayCtrl.BeginRender(m_pDlgShow->GetDlgItem(IDC_STATIC_BigMovie)->GetSafeHwnd());
+		m_csPlayCtrl.BeginRender(m_pDlgShow->GetDlgItem(IDC_STATIC_BigMovie)->GetSafeHwnd());
 	}
-	//m_csPlayCtrl.BeginSave();
+	m_csPlayCtrl.BeginSave();
 	//m_csPlayCtrl.BeginLocalPlay(L"F:\\SaveFolder\\2018-09-06 03-38-39_915.dat");
+#endif
 
 	LocalPlayWidgetEnable(0, FALSE);
 	DevicePlayWidgetEnable(0, FALSE);
@@ -303,10 +285,10 @@ BOOL CPlayerDlg::DestroyWindow()
 	KillTimer(1);
 	KillTimer(2);
 
-	if (m_pDlgShow != NULL)
-	{
-		delete m_pDlgShow;
-	}
+	//if (m_pDlgShow != NULL)
+	//{
+	//	delete m_pDlgShow;
+	//}
 
 	return CDialogEx::DestroyWindow();
 }
@@ -405,7 +387,7 @@ LRESULT CPlayerDlg::PlayCtrlMessage(WPARAM wMsg, LPARAM lData)
 		case _WND_Msg_ShowRectInvalidate:
 		{
 			m_pDlgShow->GetDlgItem(IDC_STATIC_BigMovie)->Invalidate();
-			m_pDlgShow->SetWindowText(L"");
+			//m_pDlgShow->SetWindowText(L"");
 			break;
 		}
 		case _WND_Msg_ShowName:
@@ -413,7 +395,7 @@ LRESULT CPlayerDlg::PlayCtrlMessage(WPARAM wMsg, LPARAM lData)
 			wchar_t *pStr = (wchar_t *)lData;
 			if (pStr != NULL)
 			{
-				m_pDlgShow->SetWindowText(pStr);
+				//m_pDlgShow->SetWindowText(pStr);
 				free(pStr);
 			}
 			break;
@@ -506,11 +488,14 @@ void CPlayerDlg::OnTimer(UINT_PTR nIDEvent)
 	{
 		if ((timeGetTime() - m_u32ErrorTime) > 10 * 1000)
 		{
-			m_csStatusBar.SetPaneText(_StatusBar_ErrorMessage, NULL, TRUE);
+			if (m_pDlgShow != NULL)
+			{
+				m_pDlgShow->SetPaneText(_StatusBar_ErrorMessage, NULL, TRUE);
+			}
 		}
 	}
 
-	if (nIDEvent == 1)
+	if ((nIDEvent == 1) && (m_pDlgShow != NULL))
 	{
 		UINT32 u32CPUIdle = 0;
 		UINT64 u64MemTotal = 0;
@@ -522,10 +507,10 @@ void CPlayerDlg::OnTimer(UINT_PTR nIDEvent)
 
 		CString csStr;
 		csStr.Format(L"CPU: %d%%", 100 - u32CPUIdle);
-		m_csStatusBar.SetPaneText(_StatusBar_CPU, csStr, TRUE);
+		m_pDlgShow->SetPaneText(_StatusBar_CPU, csStr, TRUE);
 
 		csStr.Format(L"内存: %d%%", u32MemLoad);
-		m_csStatusBar.SetPaneText(_StatusBar_Memory, csStr, TRUE);
+		m_pDlgShow->SetPaneText(_StatusBar_Memory, csStr, TRUE);
 
 
 		UINT32 u32Speed[2] ={ 0 };
@@ -556,7 +541,7 @@ void CPlayerDlg::OnTimer(UINT_PTR nIDEvent)
 			u32Speed[0], pwUnit[u32SpeedUnit[0]],
 			u32Speed[1], pwUnit[u32SpeedUnit[1]]);
 
-		m_csStatusBar.SetPaneText(_StatusBar_NetInterface, csStr, TRUE);
+		m_pDlgShow->SetPaneText(_StatusBar_NetInterface, csStr, TRUE);
 	}
 	if (nIDEvent == 2)
 	{
@@ -580,8 +565,12 @@ void CPlayerDlg::OnTimer(UINT_PTR nIDEvent)
 			stFrameHeader.u16Width = WIDTH;
 			stFrameHeader.u16Height = HEIGHT;
 
+			stFrameHeader.u32EncodeType = PixelType_Gvsp_RGB8_Packed;
+
 			stFrameHeader.u32TimeStampHigh = (uint32_t)(u64TimeTmp >> 32);
 			stFrameHeader.u32TimeStampLow = (uint32_t)u64TimeTmp;
+
+			GetFrameHeaderCheckSum(&stFrameHeader);
 
 
 			UINT32 u32Length = WIDTH * HEIGHT * 3;
@@ -968,7 +957,7 @@ void CPlayerDlg::OnBnClickedBtnDevicecapture()
 
 			GetDlgItem(IDC_BTN_DeviceCapture)->SetWindowText(L"停止采集");
 
-			m_pDlgShow->SetWindowText(m_csLinkDevName);
+			//m_pDlgShow->SetWindowText(m_csLinkDevName);
 
 		}
 	}
@@ -1230,6 +1219,10 @@ void CPlayerDlg::DevicePlayWidgetEnable(UINT32 u32Level, BOOL boIsEnable/* = TRU
 
 void CPlayerDlg::ShowErrorMsg(wchar_t *pMsg, INT32 s32ErrorNo)
 {
+	if (m_pDlgShow == NULL)
+	{
+		return;
+	}
 	CString csStrMsg;
 	if (s32ErrorNo == 0)
 	{
@@ -1282,8 +1275,9 @@ void CPlayerDlg::ShowErrorMsg(wchar_t *pMsg, INT32 s32ErrorNo)
 		break;
 	}
 	case MV_E_VERSION:
-	{          csStrMsg += L"Version mismatches ";
-	break;
+	{ 
+		csStrMsg += L"Version mismatches ";
+		break;
 	}
 	case MV_E_NOENOUGH_BUF:
 	{
@@ -1329,7 +1323,7 @@ void CPlayerDlg::ShowErrorMsg(wchar_t *pMsg, INT32 s32ErrorNo)
 
 	m_u32ErrorTime = (UINT32)timeGetTime();
 
-	m_csStatusBar.SetPaneText(_StatusBar_ErrorMessage, csStrMsg, TRUE);
+	m_pDlgShow->SetPaneText(_StatusBar_ErrorMessage, csStrMsg, TRUE);
 }
 
 
@@ -1625,12 +1619,35 @@ void CPlayerDlg::OnBnClickedBtnLocalset()
 	if (csDlg.m_csStrTitle != m_cswTitle.c_str())
 	{
 		m_cswTitle = csDlg.m_csStrTitle.GetString();
-		SetWindowText(csDlg.m_csStrTitle);
+		if (m_pDlgShow != NULL)
+		{
+			m_pDlgShow->SetWindowText(csDlg.m_csStrTitle);
+		}
 		boNeedSaveConfig = true;
 	}
-
+	if (boNeedSaveConfig)
 	{
 		SetConfig();
 	}
 
+}
+
+void CPlayerDlg::OnBnClickedBtnHide()
+{
+	// TODO: 在此添加控件通知处理程序代码
+	ShowWindow(SW_HIDE);
+	if (m_pDlgShow != NULL)
+	{
+		m_pDlgShow->ShowWindow(SW_MAXIMIZE);
+	}
+}
+
+
+
+void CPlayerDlg::OnClose()
+{
+	// TODO: 在此添加消息处理程序代码和/或调用默认值
+	OnBnClickedBtnHide();
+
+	CDialogEx::OnClose();
 }

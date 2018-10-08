@@ -68,6 +68,11 @@ BOOL CDlgLocalSet::OnInitDialog()
 	SetIcon(m_hIcon, TRUE);			// 设置大图标
 	SetIcon(m_hIcon, FALSE);		// 设置小图标
 
+	CMenu* pSysMenu = GetSystemMenu(FALSE);
+	if (pSysMenu != NULL)
+	{
+		pSysMenu->EnableMenuItem(SC_CLOSE, MF_DISABLED);
+	}
 
 	for (INT i = 0; i < 10; i++)
 	{

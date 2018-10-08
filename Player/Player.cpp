@@ -5,6 +5,7 @@
 #include "stdafx.h"
 #include "Player.h"
 #include "PlayerDlg.h"
+#include "DlgShow.h"
 
 #ifdef _DEBUG
 #define new DEBUG_NEW
@@ -70,7 +71,8 @@ BOOL CPlayerApp::InitInstance()
 	// 例如修改为公司或组织名
 	SetRegistryKey(_T("应用程序向导生成的本地应用程序"));
 
-	CPlayerDlg dlg;
+	//CPlayerDlg dlg;
+	CDlgShow dlg;
 	m_pMainWnd = &dlg;
 	INT_PTR nResponse = dlg.DoModal();
 	if (nResponse == IDOK)

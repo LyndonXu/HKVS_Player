@@ -11,12 +11,25 @@
 
 #define STATUS_ERROR            -1
 
+
+enum
+{
+	_StatusBar_CPU,
+	_StatusBar_Memory,
+	_StatusBar_NetInterface,
+	_StatusBar_ErrorMessage,
+
+	_StatusBar_Reserved,
+};
+
+
 // CPlayerDlg 对话框
 class CPlayerDlg : public CDialogEx
 {
 // 构造
 public:
 	CPlayerDlg(CWnd* pParent = NULL);	// 标准构造函数
+	virtual ~CPlayerDlg();
 
 // 对话框数据
 #ifdef AFX_DESIGN_TIME
@@ -39,20 +52,9 @@ protected:
 	afx_msg HCURSOR OnQueryDragIcon();
 	DECLARE_MESSAGE_MAP()
 
-public:
-	enum
-	{
-		_StatusBar_CPU,
-		_StatusBar_Memory,
-		_StatusBar_NetInterface,
-		_StatusBar_ErrorMessage,
-
-		_StatusBar_Reserved,
-	};
 
 private:
 
-	CStatusBar m_csStatusBar;
 
 	CGetSysInfo m_csSysInfo;
 	CPlayCtrl m_csPlayCtrl;
@@ -97,6 +99,10 @@ public:
 	afx_msg void OnBnClickedBtnDeviceopenclose();
 	afx_msg void OnBnClickedBtnDevicecapture();
 	afx_msg void OnHScroll(UINT nSBCode, UINT nPos, CScrollBar* pScrollBar);
+	afx_msg void OnBnClickedBtnDeviceparamget();
+	afx_msg void OnBnClickedBtnDeviceparamset();
+	afx_msg void OnBnClickedBtnLocalset();
+	afx_msg void OnBnClickedBtnHide();
 
 	LRESULT PlayCtrlMessage(WPARAM wMsg, LPARAM lData);
 
@@ -124,9 +130,14 @@ public:
 	INT SearchSaveFolder(uint64_t u64TimeBegin, uint64_t u64TimeEnd,
 		PFUN_SearchSaveFolderCB pFunCB, void *pContext);
 
-	afx_msg void OnBnClickedBtnDeviceparamget();
-	afx_msg void OnBnClickedBtnDeviceparamset();
-	afx_msg void OnBnClickedBtnLocalset();
+
+	void SetShowDlg(CDlgShow *pDlg)
+	{
+		m_pDlgShow = pDlg;
+	}
+
+
+	afx_msg void OnClose();
 };
 
 #define PLAYCTRL_MSG		(WM_USER + 200)

@@ -20,17 +20,25 @@ protected:
 	HICON m_hIcon;
 
 	virtual void DoDataExchange(CDataExchange* pDX);    // DDX/DDV Ö§³Ö
+	virtual BOOL OnInitDialog();
+	virtual BOOL PreTranslateMessage(MSG* pMsg);
 
 	DECLARE_MESSAGE_MAP()
 public:
 	afx_msg void OnSize(UINT nType, int cx, int cy);
-	virtual BOOL OnInitDialog();
+	afx_msg void OnBnClickedBtnSet();
+	afx_msg BOOL OnToolTipNotify(UINT id, NMHDR *pNMHDR, LRESULT *pResult);
 
-	CWnd *m_pCreateWnd;
+private:
+	CDialogEx *m_pDlgPlayCtrl;
+	CStatusBar m_csStatusBar;
 
-	void SetCreateWND(CWnd *pWnd)
+	CToolTipCtrl m_csToolTips;
+
+public:
+	BOOL SetPaneText(int nIndex, LPCTSTR lpszNewText, BOOL bUpdate = TRUE)
 	{
-		m_pCreateWnd = pWnd;
+		return m_csStatusBar.SetPaneText(nIndex, lpszNewText, bUpdate);
 	}
 
 };
