@@ -10,9 +10,12 @@
 #include "DlgLocalSet.h"
 
 #include "utils.h"
+#include "sundries.h"
 
 #pragma comment(lib, "Winmm.lib")
 
+#define DEFALT_PASSWORD		"JAHMwxk7VCHh0iZJ"
+#define DEFALT_TITLE		"bmymvCpCOBe0NUDqPluNh56Q0RTkicVIhaNlxRvPS9dv9OnAwDH4iKYTM4xY5oXcj0ydp6TtY0j1KSam/ttMgFBdMlNoo3/X"	
 
 // 用于应用程序“关于”菜单项的 CAboutDlg 对话框
 
@@ -151,6 +154,30 @@ BOOL CPlayerDlg::OnInitDialog()
 	SetIcon(m_hIcon, FALSE);		// 设置小图标
 
 	// TODO: 在此添加额外的初始化代码
+#ifndef _DEBUG
+	RegAutoRun();
+#endif
+
+
+#if 0
+	{
+		//int32_t GetDecodePassword(const char *pBase64, char **p2Password);
+		//int32_t GetEncodePassword(const char *pPassword, char **p2Base64);
+		char *pPassword = NULL, *pBase64 = NULL;
+		GetEncodePassword("高速飞剪信息采集存储监控系统  版本V10.0.1  天津北洋天泽 版权所有", &pBase64);
+		GetDecodePassword(pBase64, &pPassword);
+
+		if (pPassword != NULL)
+		{
+			free(pPassword);
+		}
+
+		if (pBase64 != NULL)
+		{
+			free(pBase64);
+		}
+	}
+#endif
 
 #if 0
 	{
@@ -873,12 +900,14 @@ void CPlayerDlg::OnBnClickedBtnDeviceopenclose()
 
 			m_csCBDevList.GetLBText(m_csCBDevList.GetCurSel(), m_csLinkDevName);
 
+			StartCapture();
+
 		}
 	}
 	else
 	{
 		GetDlgItem(IDC_BTN_DeviceCapture)->GetWindowText(csStr);
-		if (csStr == L"停止采集")
+		if (csStr == L"停止录制")
 		{
 			if (m_pMyCamera != NULL)
 			{
@@ -886,7 +915,7 @@ void CPlayerDlg::OnBnClickedBtnDeviceopenclose()
 				m_csPlayCtrl.StopRender();
 				m_csPlayCtrl.StopSave();
 			}
-			GetDlgItem(IDC_BTN_DeviceCapture)->SetWindowText(L"开始采集");
+			GetDlgItem(IDC_BTN_DeviceCapture)->SetWindowText(L"开始录制");
 		}
 
 		CloseDevice();
@@ -940,37 +969,16 @@ void CPlayerDlg::OnBnClickedBtnDevicecapture()
 	GetDlgItem(IDC_BTN_DeviceCapture)->GetWindowText(csStr);
 
 	int nRet = 0;
-	if (csStr == L"开始采集")
+	if (csStr == L"开始录制")
 	{
-		nRet = m_pMyCamera->SetEnumValue("TriggerMode", MV_TRIGGER_MODE_OFF);
-		nRet = SetFrameFormat(PixelType_Gvsp_RGB8_Packed);
-		nRet = m_pMyCamera->RegisterImageCallBack(ImageCallBack, this);
+		m_csPlayCtrl.BeginSave();
+		GetDlgItem(IDC_BTN_DeviceCapture)->SetWindowText(L"停止录制");
 
-		nRet = m_pMyCamera->StartGrabbing();
-		if (nRet == MV_OK)
-		{
-			/* <TODO> */
-			m_csPlayCtrl.BeginSave();
-			m_csPlayCtrl.BeginRender(m_pDlgShow->GetDlgItem(IDC_STATIC_BigMovie)->
-				GetSafeHwnd());
-
-
-			GetDlgItem(IDC_BTN_DeviceCapture)->SetWindowText(L"停止采集");
-
-			//m_pDlgShow->SetWindowText(m_csLinkDevName);
-
-		}
 	}
 	else
 	{
-		nRet = m_pMyCamera->StopGrabbing();
-		if (nRet == MV_OK)
-		{
-			m_csPlayCtrl.StopRender();
-			m_csPlayCtrl.StopSave();
-
-			GetDlgItem(IDC_BTN_DeviceCapture)->SetWindowText(L"开始采集");
-		}
+		m_csPlayCtrl.StopSave();
+		GetDlgItem(IDC_BTN_DeviceCapture)->SetWindowText(L"开始录制");
 	}
 }
 
@@ -1050,18 +1058,46 @@ INT CPlayerDlg::SetConfig(void)
 		, wcFileName
 	);
 
-	WritePrivateProfileString(
-		_T("LocalSet")
-		, _T("Title")
-		, m_cswTitle.c_str()
-		, wcFileName
-	);
+	char *pBase64 = NULL;
+	string csStr;
+	wstring cswStr;
+
+	Convert(m_cswTitle.c_str(), csStr);
+	GetEncodeString(csStr.c_str(), &pBase64);
+	if (pBase64 != NULL)
+	{
+		Convert(pBase64, cswStr);
+		free(pBase64);
+
+		WritePrivateProfileString(
+			_T("LocalSet")
+			, _T("Title")
+			, cswStr.c_str()
+			, wcFileName
+		);
+	}
+
+
+	Convert(m_cswPassword.c_str(), csStr);
+	GetEncodeString(csStr.c_str(), &pBase64);
+	if (pBase64 != NULL)
+	{
+		Convert(pBase64, cswStr);
+		free(pBase64);
+
+		WritePrivateProfileString(
+			_T("LocalSet")
+			, _T("Password")
+			, cswStr.c_str()
+			, wcFileName
+		);
+	}
 
 	return 0;
 }
 INT CPlayerDlg::GetConfig(void)
 {
-	wchar_t wcFileName[256] = { 0 };
+	wchar_t wcFileName[512] = { 0 };
 	DWORD dwRet = GetModuleFileName(NULL, wcFileName, 256);
 
 	if (dwRet != 0 && dwRet < 254)
@@ -1132,14 +1168,44 @@ INT CPlayerDlg::GetConfig(void)
 	dwRet = GetPrivateProfileString(
 		_T("LocalSet")
 		, _T("Title")
-		, _T("User config")
+		, _T(DEFALT_TITLE)
+		, wcValue, 512 - 2
+		, wcFileName
+	);
+	{
+		Convert(wcValue, csStr);
+		PRINT("Password: %s\n", csStr.c_str());
+		char *pPassword = NULL;
+		GetDecodePassword(csStr.c_str(), &pPassword);
+		if (pPassword == NULL)
+		{
+			ShowErrorMsg(L"password fromate error", 0);
+			GetDecodePassword(DEFALT_TITLE, &pPassword);
+		}
+		Convert(pPassword, m_cswTitle);
+		free(pPassword);
+	}
+
+	dwRet = GetPrivateProfileString(
+		_T("LocalSet")
+		, _T("Password")
+		, _T(DEFALT_PASSWORD)
 		, wcValue, 256 - 2
 		, wcFileName
 	);
-
-	Convert(wcValue, csStr);
-	PRINT("Title: %s\n", csStr.c_str());
-	m_cswTitle = wcValue;
+	{
+		Convert(wcValue, csStr);
+		PRINT("Password: %s\n", csStr.c_str());
+		char *pPassword = NULL;
+		GetDecodePassword(csStr.c_str(), &pPassword);
+		if (pPassword == NULL)
+		{
+			ShowErrorMsg(L"password fromate error", 0);
+			GetDecodePassword(DEFALT_PASSWORD, &pPassword);
+		}
+		Convert(pPassword, m_cswPassword);
+		free(pPassword);
+	}
 
 	return 0;
 }
@@ -1396,6 +1462,48 @@ INT CPlayerDlg::CloseDevice(void)
 	return MV_OK;
 }
 
+INT CPlayerDlg::StartCapture(void)
+{
+	if (m_pMyCamera == NULL)
+	{
+		return -1;
+	}
+	int nRet = 0;
+
+	nRet = m_pMyCamera->SetEnumValue("TriggerMode", MV_TRIGGER_MODE_OFF);
+	nRet = SetFrameFormat(PixelType_Gvsp_RGB8_Packed);
+	nRet = m_pMyCamera->RegisterImageCallBack(ImageCallBack, this);
+
+	nRet = m_pMyCamera->StartGrabbing();
+	if (nRet == MV_OK)
+	{
+		/* <TODO> */
+		m_csPlayCtrl.BeginRender(m_pDlgShow->GetDlgItem(IDC_STATIC_BigMovie)->
+			GetSafeHwnd());
+	}
+	return nRet;
+
+}
+
+INT CPlayerDlg::StopCapture(void)
+{
+	if (m_pMyCamera == NULL)
+	{
+		return -1;
+	}
+	int nRet = 0;
+
+	nRet = m_pMyCamera->StopGrabbing();
+	if (nRet == MV_OK)
+	{
+		m_csPlayCtrl.StopRender();
+	}
+
+	return nRet;
+	
+}
+
+
 
 // ch:获取曝光时间 | en:Get Exposure Time
 int CPlayerDlg::GetExposureTime(void)
@@ -1578,11 +1686,13 @@ void CPlayerDlg::OnBnClickedBtnLocalset()
 	csDlg.m_u32FolderSize = ((UINT)(m_u64FolderMaxSize / 1024));
 	csDlg.m_s32RecordContinusTime = m_u32SaveContinusTime - 1;
 	csDlg.m_csStrTitle = m_cswTitle.c_str();
+	csDlg.m_csStrPasswordOld = m_cswPassword.c_str();
 
 	int nRet = csDlg.DoModal();
-	if (nRet == IDOK)
+	if (nRet != IDOK)
 	{
 		nRet = nRet;
+		return;
 	}
 
 	bool boNeedSaveConfig = false;
@@ -1625,6 +1735,17 @@ void CPlayerDlg::OnBnClickedBtnLocalset()
 		}
 		boNeedSaveConfig = true;
 	}
+
+	if (csDlg.m_csStrNewPW == csDlg.m_csStrNewPWRepeat)
+	{
+		if (csDlg.m_csStrNewPW != m_cswPassword.c_str() 
+			&& csDlg.m_csStrNewPW.GetLength() != 0)
+		{
+			m_cswPassword = csDlg.m_csStrNewPW.GetString();
+			boNeedSaveConfig = true;
+		}
+	}
+
 	if (boNeedSaveConfig)
 	{
 		SetConfig();
@@ -1650,4 +1771,66 @@ void CPlayerDlg::OnClose()
 	OnBnClickedBtnHide();
 
 	CDialogEx::OnClose();
+}
+
+void CPlayerDlg::RegAutoRun()
+{
+	// TODO: 在此添加控件通知处理程序代码
+	HKEY hKey = NULL, hExeKey = NULL;
+	TCHAR *pRun = L"Software\\Microsoft\\Windows\\CurrentVersion\\Run\\";
+	TCHAR tcFileFullName[MAX_PATH] = { 0 };
+	TCHAR tcFileName[MAX_PATH] = { 0 };
+
+	GetModuleFileName(NULL, tcFileFullName, MAX_PATH);
+
+	TCHAR *pStr = wcsrchr(tcFileFullName, L'\\');
+	if (pStr != NULL)
+	{
+		memcpy(tcFileName, pStr + 1, sizeof(TCHAR) * (wcsrchr(tcFileFullName, L'.') - pStr - 1));
+	}
+	BOOL boFindKey = FALSE;
+	do
+	{
+		LONG lRet = RegOpenKeyEx(HKEY_CURRENT_USER, pRun, 0, KEY_READ, &hKey);
+		if (lRet != ERROR_SUCCESS)
+		{
+			break;
+		}
+		TCHAR tcValue[MAX_PATH] = { 0 };
+		DWORD dLen = MAX_PATH;
+		lRet = RegGetValue(hKey, NULL, tcFileName, RRF_RT_REG_SZ, NULL, tcValue, &dLen);
+		if (lRet != ERROR_SUCCESS)
+		{
+			RegCloseKey(hKey);
+			break;
+		}
+		if (wcscmp(tcFileFullName, tcValue) == 0)
+		{
+			boFindKey = TRUE;
+		}
+
+		RegCloseKey(hKey);
+	} while (0);
+	if (!boFindKey)
+	{
+		LONG lRet = RegOpenKeyEx(HKEY_CURRENT_USER, pRun, 0, KEY_WRITE, &hKey);
+		if (lRet != ERROR_SUCCESS)
+		{
+			MessageBox(L"请使用管理员权限重新打开并设置", L"提醒");
+			return;
+		}
+		lRet = RegSetValueEx(hKey, tcFileName, 0, REG_SZ, (const BYTE*)tcFileFullName, MAX_PATH);
+		RegCloseKey(hKey);
+	}
+	//else
+	//{
+	//	LONG lRet = RegOpenKeyEx(HKEY_CURRENT_USER, pRun, 0, KEY_WRITE, &hKey);
+	//	if (lRet != ERROR_SUCCESS)
+	//	{
+	//		MessageBox("请使用管理员权限重新打开并设置", "提醒");
+	//		return;
+	//	}
+	//	lRet = RegDeleteValue(hKey, tcFileName);
+	//	RegCloseKey(hKey);
+	//}
 }

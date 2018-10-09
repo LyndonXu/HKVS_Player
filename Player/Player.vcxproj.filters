@@ -60,6 +60,12 @@
     <ClInclude Include="DlgLocalSet.h">
       <Filter>头文件</Filter>
     </ClInclude>
+    <ClInclude Include="PasswordEdit.h">
+      <Filter>源文件</Filter>
+    </ClInclude>
+    <ClInclude Include="sundries.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Player.cpp">
@@ -93,6 +99,12 @@
       <Filter>源文件</Filter>
     </ClCompile>
     <ClCompile Include="DlgLocalSet.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="PasswordEdit.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="sundries.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
   </ItemGroup>

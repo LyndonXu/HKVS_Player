@@ -1,5 +1,6 @@
 #pragma once
 #include "afxwin.h"
+#include "PasswordEdit.h"
 
 
 // CDlgLocalSet ¶Ô»°¿ò
@@ -35,6 +36,15 @@ public:
 	int m_s32RecordContinusTime;
 	CEdit m_csEditTitle;
 	CString m_csStrTitle;
+
+	CString m_csStrPasswordOld;
+
 	afx_msg void OnBnClickedBtnSavefolderselect();
 	afx_msg void OnBnClickedOk();
+	CPasswordEdit m_csEditPassword;
+	CPasswordEdit m_csEditNewPW;
+	CPasswordEdit m_csEditNewPWRepeat;
+	afx_msg void OnEnUpdateEditPassword();
+	CString m_csStrNewPW;
+	CString m_csStrNewPWRepeat;
 };

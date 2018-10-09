@@ -66,6 +66,7 @@ private:
 	UINT32 m_u32SaveContinusTime;	/* Minute */
 
 	wstring m_cswTitle;
+	wstring m_cswPassword;
 
 	bool m_boIsSliderChangingByUser;
 	UINT32 m_u32ErrorTime;
@@ -103,6 +104,7 @@ public:
 	afx_msg void OnBnClickedBtnDeviceparamset();
 	afx_msg void OnBnClickedBtnLocalset();
 	afx_msg void OnBnClickedBtnHide();
+	afx_msg void OnClose();
 
 	LRESULT PlayCtrlMessage(WPARAM wMsg, LPARAM lData);
 
@@ -116,6 +118,8 @@ public:
 	INT OpenDevice(void);
 	INT CloseDevice(void);
 
+	INT StartCapture(void);
+	INT StopCapture(void);
 
 	int GetExposureTime(void);
 	int SetExposureTime(void);
@@ -136,8 +140,8 @@ public:
 		m_pDlgShow = pDlg;
 	}
 
+	void RegAutoRun();
 
-	afx_msg void OnClose();
 };
 
 #define PLAYCTRL_MSG		(WM_USER + 200)

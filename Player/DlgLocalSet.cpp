@@ -17,6 +17,8 @@ CDlgLocalSet::CDlgLocalSet(CWnd* pParent /*=NULL*/)
 	, m_u32FolderSize(20)
 	, m_s32RecordContinusTime(0)
 	, m_csStrTitle(_T(""))
+	, m_csStrNewPW(_T(""))
+	, m_csStrNewPWRepeat(_T(""))
 {
 	m_hIcon = AfxGetApp()->LoadIcon(IDR_MAINFRAME);
 }
@@ -37,12 +39,18 @@ void CDlgLocalSet::DoDataExchange(CDataExchange* pDX)
 	DDV_MinMaxInt(pDX, m_s32RecordContinusTime, 0, 9);
 	DDX_Control(pDX, IDC_EDIT_Title, m_csEditTitle);
 	DDX_Text(pDX, IDC_EDIT_Title, m_csStrTitle);
+	DDX_Control(pDX, IDC_EDIT_Password, m_csEditPassword);
+	DDX_Control(pDX, IDC_EDIT_NewPW, m_csEditNewPW);
+	DDX_Control(pDX, IDC_EDIT_NewPWRepeat, m_csEditNewPWRepeat);
+	DDX_Text(pDX, IDC_EDIT_NewPW, m_csStrNewPW);
+	DDX_Text(pDX, IDC_EDIT_NewPWRepeat, m_csStrNewPWRepeat);
 }
 
 
 BEGIN_MESSAGE_MAP(CDlgLocalSet, CDialogEx)
 	ON_BN_CLICKED(IDC_BTN_SaveFolderSelect, &CDlgLocalSet::OnBnClickedBtnSavefolderselect)
 	ON_BN_CLICKED(IDOK, &CDlgLocalSet::OnBnClickedOk)
+	ON_EN_UPDATE(IDC_EDIT_Password, &CDlgLocalSet::OnEnUpdateEditPassword)
 END_MESSAGE_MAP()
 
 
@@ -81,8 +89,21 @@ BOOL CDlgLocalSet::OnInitDialog()
 		m_csComboRecordContinusTime.AddString(csStr);
 	}
 
-
 	UpdateData(FALSE);
+
+	m_csEditPassword.m_csInitString = L"请输入密码";
+	m_csEditPassword.SetWindowText(m_csEditPassword.m_csInitString);
+
+	m_csEditNewPW.m_csInitString = L"新密码";
+	m_csEditNewPW.SetWindowText(m_csEditNewPW.m_csInitString);
+
+	m_csEditNewPWRepeat.m_csInitString = L"再次输入";
+	m_csEditNewPWRepeat.SetWindowText(m_csEditNewPWRepeat.m_csInitString);
+
+	m_csEditNewPW.EnableWindow(FALSE);
+	m_csEditNewPWRepeat.EnableWindow(FALSE);
+	m_csEditTitle.EnableWindow(FALSE);
+
 
 	return TRUE;  // return TRUE unless you set the focus to a control
 				  // 异常: OCX 属性页应返回 FALSE
@@ -120,5 +141,43 @@ void CDlgLocalSet::OnBnClickedOk()
 
 	UpdateData();
 
+	if (m_csStrNewPW != L"新密码" || m_csStrNewPWRepeat != L"再次输入")
+	{
+		if (m_csStrNewPW != m_csStrNewPWRepeat)
+		{
+			int nRet = MessageBox(L"新密码不一致, 是否退出？", L"提醒", MB_YESNO | MB_ICONWARNING);
+			if (nRet == IDNO)
+			{
+				return;
+			}
+		}
+	}
+
 	CDialogEx::OnOK();
+}
+
+
+void CDlgLocalSet::OnEnUpdateEditPassword()
+{
+	// TODO:  如果该控件是 RICHEDIT 控件，它将不
+	// 发送此通知，除非重写 CDialogEx::OnInitDialog()
+	// 函数，以将 EM_SETEVENTMASK 消息发送到该控件，
+	// 同时将 ENM_UPDATE 标志“或”运算到 lParam 掩码中。
+
+	// TODO:  在此添加控件通知处理程序代码
+	
+	CString csStr;
+	m_csEditPassword.GetWindowTextW(csStr);
+	if (csStr == m_csStrPasswordOld)
+	{
+		m_csEditNewPW.EnableWindow(TRUE);
+		m_csEditNewPWRepeat.EnableWindow(TRUE);
+		m_csEditTitle.EnableWindow(TRUE);
+	}
+	else
+	{
+		m_csEditNewPW.EnableWindow(FALSE);
+		m_csEditNewPWRepeat.EnableWindow(FALSE);
+		m_csEditTitle.EnableWindow(FALSE);
+	}
 }
