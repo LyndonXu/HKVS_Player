@@ -62,6 +62,12 @@ CPlayerDlg::CPlayerDlg(CWnd* pParent /*=NULL*/)
 	, m_u32SaveContinusTime(5)
 
 	, m_cswTitle(L"User Config")
+
+	, m_d64BackupExposure(4000)
+	, m_d64BackupGain(15)
+	, m_d64BackupFPS(200)
+	, m_u32BackupWidth(336)
+	, m_u32BackupHeight(256)
 	
 	, m_boIsSliderChangingByUser(false)
 	, m_pMyCamera(NULL)
@@ -896,6 +902,12 @@ void CPlayerDlg::OnBnClickedBtnDeviceopenclose()
 			DevicePlayWidgetEnable(1, TRUE);
 			ShowErrorMsg(TEXT(""), 0);
 
+			SetExposureTime(&m_d64BackupExposure);
+			SetGain(&m_d64BackupGain);
+			SetFrameRate(&m_d64BackupFPS);
+			SetWidth(&m_u32BackupWidth);
+			SetHeight(&m_u32BackupHeight);
+
 			OnBnClickedBtnDeviceparamget();
 
 			m_csCBDevList.GetLBText(m_csCBDevList.GetCurSel(), m_csLinkDevName);
@@ -1206,6 +1218,51 @@ INT CPlayerDlg::GetConfig(void)
 		Convert(pPassword, m_cswPassword);
 		free(pPassword);
 	}
+
+	dwRet = GetPrivateProfileString(
+		_T("CameraSet")
+		, _T("Exposure")
+		, _T("4000")
+		, wcValue, 256 - 2
+		, wcFileName
+	);
+	m_d64BackupExposure = _wtof(wcValue);
+
+	dwRet = GetPrivateProfileString(
+		_T("CameraSet")
+		, _T("Gain")
+		, _T("15")
+		, wcValue, 256 - 2
+		, wcFileName
+	);
+	m_d64BackupGain = _wtof(wcValue);
+
+	dwRet = GetPrivateProfileString(
+		_T("CameraSet")
+		, _T("FrameRate")
+		, _T("200")
+		, wcValue, 256 - 2
+		, wcFileName
+	);
+	m_d64BackupFPS = _wtof(wcValue);
+
+	dwRet = GetPrivateProfileString(
+		_T("CameraSet")
+		, _T("Width")
+		, _T("336")
+		, wcValue, 256 - 2
+		, wcFileName
+	);
+	m_u32BackupWidth = _wtoi(wcValue);
+
+	dwRet = GetPrivateProfileString(
+		_T("CameraSet")
+		, _T("Height")
+		, _T("256")
+		, wcValue, 256 - 2
+		, wcFileName
+	);
+	m_u32BackupHeight = _wtoi(wcValue);
 
 	return 0;
 }
@@ -1521,7 +1578,7 @@ int CPlayerDlg::GetExposureTime(void)
 }
 
 // ch:设置曝光时间 | en:Set Exposure Time
-int CPlayerDlg::SetExposureTime(void)
+INT CPlayerDlg::SetExposureTime(double *pData/* = NULL*/)
 {
 	// ch:调节这两个曝光模式，才能让曝光时间生效
 	// en:Adjust these two exposure mode to allow exposure time effective
@@ -1533,7 +1590,13 @@ int CPlayerDlg::SetExposureTime(void)
 
 	nRet = m_pMyCamera->SetEnumValue("ExposureAuto", MV_EXPOSURE_AUTO_MODE_OFF);
 
-	nRet = m_pMyCamera->SetFloatValue("ExposureTime", (float)m_d64Exposure);
+	double d64Data = m_d64Exposure;
+	if (pData != NULL)
+	{
+		d64Data = *pData;
+	}
+
+	nRet = m_pMyCamera->SetFloatValue("ExposureTime", (float)d64Data);
 	if (MV_OK != nRet)
 	{
 		return nRet;
@@ -1543,7 +1606,7 @@ int CPlayerDlg::SetExposureTime(void)
 }
 
 // ch:获取增益 | en:Get Gain
-int CPlayerDlg::GetGain(void)
+INT CPlayerDlg::GetGain(void)
 {
 	float  fFloatValue = 0.0;
 
@@ -1558,17 +1621,22 @@ int CPlayerDlg::GetGain(void)
 }
 
 // ch:设置增益 | en:Set Gain
-int CPlayerDlg::SetGain(void)
+INT CPlayerDlg::SetGain(double *pData/* = NULL*/)
 {
 	// ch:设置增益前先把自动增益关闭，失败无需返回
 	//en:Set Gain after Auto Gain is turned off, this failure does not need to return
 	int nRet = m_pMyCamera->SetEnumValue("GainAuto", 0);
 
-	return m_pMyCamera->SetFloatValue("Gain", (float)m_d64Gain);
+	double d64Data = m_d64Gain;
+	if (pData != NULL)
+	{
+		d64Data = *pData;
+	}
+	return m_pMyCamera->SetFloatValue("Gain", (float)d64Data);
 }
 
 // ch:获取帧率 | en:Get Frame Rate
-int CPlayerDlg::GetFrameRate(void)
+INT CPlayerDlg::GetFrameRate(void)
 {
 
 	float  fFloatValue = 0.0;
@@ -1584,7 +1652,7 @@ int CPlayerDlg::GetFrameRate(void)
 }
 
 // ch:设置帧率 | en:Set Frame Rate
-int CPlayerDlg::SetFrameRate(void)
+INT CPlayerDlg::SetFrameRate(double *pData/* = NULL*/)
 {
 	int nRet = m_pMyCamera->SetBoolValue("AcquisitionFrameRateEnable", true);
 	if (MV_OK != nRet)
@@ -1592,10 +1660,15 @@ int CPlayerDlg::SetFrameRate(void)
 		return nRet;
 	}
 
-	return m_pMyCamera->SetFloatValue("AcquisitionFrameRate", (float)m_d64FPS);
+	double d64Data = m_d64FPS;
+	if (pData != NULL)
+	{
+		d64Data = *pData;
+	}
+	return m_pMyCamera->SetFloatValue("AcquisitionFrameRate", (float)d64Data);
 }
 
-int CPlayerDlg::GetFrameFormat(void)
+INT CPlayerDlg::GetFrameFormat(void)
 {
 	unsigned int nType = 0;
 	int nRet = m_pMyCamera->GetEnumValue("PixelFormat", &nType);
@@ -1605,11 +1678,40 @@ int CPlayerDlg::GetFrameFormat(void)
 	}
 	return nType;
 }
-int CPlayerDlg::SetFrameFormat(MvGvspPixelType emType)
+INT CPlayerDlg::SetFrameFormat(MvGvspPixelType emType)
 {
 	unsigned int nType = emType;
 	return m_pMyCamera->SetEnumValue("PixelFormat", nType);
 }
+INT CPlayerDlg::GetWidth(void)
+{
+	return 0;
+}
+INT CPlayerDlg::SetWidth(UINT32 *pData/* = NULL*/)
+{
+	unsigned int u32Data = m_u32BackupWidth;
+	if (pData != NULL)
+	{
+		u32Data = *pData;
+	}
+	return m_pMyCamera->SetIntValue("WidthMax", u32Data);
+
+}
+INT CPlayerDlg::GetHeight(void)
+{
+	return 0;
+
+}
+INT CPlayerDlg::SetHeight(UINT32 *pData/* = NULL*/)
+{
+	unsigned int u32Data = m_u32BackupHeight;
+	if (pData != NULL)
+	{
+		u32Data = *pData;
+	}
+	return m_pMyCamera->SetIntValue("HeightMax", u32Data);
+}
+
 
 void CPlayerDlg::OnBnClickedBtnDeviceparamget()
 {

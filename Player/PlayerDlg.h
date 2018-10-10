@@ -67,6 +67,11 @@ private:
 
 	wstring m_cswTitle;
 	wstring m_cswPassword;
+	double m_d64BackupExposure;
+	double m_d64BackupGain;
+	double m_d64BackupFPS;
+	UINT32 m_u32BackupWidth;
+	UINT32 m_u32BackupHeight;
 
 	bool m_boIsSliderChangingByUser;
 	UINT32 m_u32ErrorTime;
@@ -121,14 +126,18 @@ public:
 	INT StartCapture(void);
 	INT StopCapture(void);
 
-	int GetExposureTime(void);
-	int SetExposureTime(void);
-	int GetGain(void);
-	int SetGain(void);
-	int GetFrameRate(void);
-	int SetFrameRate(void);
-	int GetFrameFormat(void);
-	int SetFrameFormat(MvGvspPixelType emType);
+	INT GetExposureTime(void);
+	INT SetExposureTime(double *pData = NULL);
+	INT GetGain(void);
+	INT SetGain(double *pData = NULL);
+	INT GetFrameRate(void);
+	INT SetFrameRate(double *pData = NULL);
+	INT GetFrameFormat(void);
+	INT SetFrameFormat(MvGvspPixelType emType);
+	INT GetWidth(void);
+	INT SetWidth(UINT32 *pData = NULL);
+	INT GetHeight(void);
+	INT SetHeight(UINT32 *pData = NULL);
 
 	INT SendFrame(const void *pData, MV_FRAME_OUT_INFO_EX* pFrameInfo);
 	INT SearchSaveFolder(uint64_t u64TimeBegin, uint64_t u64TimeEnd,
