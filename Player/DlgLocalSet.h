@@ -23,11 +23,11 @@ protected:
 	HICON m_hIcon;
 
 	virtual void DoDataExchange(CDataExchange* pDX);    // DDX/DDV Ö§³Ö
+	virtual BOOL DestroyWindow();
+	virtual BOOL OnInitDialog();
 
 	DECLARE_MESSAGE_MAP()
 public:
-	virtual BOOL DestroyWindow();
-	virtual BOOL OnInitDialog();
 	CEdit m_csEditSaveFolder;
 	CString m_csStrSaveFolder;
 	CEdit m_csEditFolderSize;
@@ -39,12 +39,16 @@ public:
 
 	CString m_csStrPasswordOld;
 
+	CPasswordEdit m_csEditPassword;
+
+	CPasswordEdit m_csEditNewPW;
+	CString m_csStrNewPW;
+
+	CPasswordEdit m_csEditNewPWRepeat;
+	CString m_csStrNewPWRepeat;
+
 	afx_msg void OnBnClickedBtnSavefolderselect();
 	afx_msg void OnBnClickedOk();
-	CPasswordEdit m_csEditPassword;
-	CPasswordEdit m_csEditNewPW;
-	CPasswordEdit m_csEditNewPWRepeat;
 	afx_msg void OnEnUpdateEditPassword();
-	CString m_csStrNewPW;
-	CString m_csStrNewPWRepeat;
+	virtual BOOL PreTranslateMessage(MSG* pMsg);
 };

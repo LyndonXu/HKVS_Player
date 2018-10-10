@@ -161,3 +161,13 @@ void CDlgSearch::OnNMDblclkListSearchresult(NMHDR *pNMHDR, LRESULT *pResult)
 }
 
 
+
+
+BOOL CDlgSearch::PreTranslateMessage(MSG* pMsg)
+{
+	// TODO: 在此添加专用代码和/或调用基类
+	if (pMsg->message == WM_KEYDOWN && pMsg->wParam == VK_ESCAPE)
+		return TRUE;
+
+	return CDialogEx::PreTranslateMessage(pMsg);
+}

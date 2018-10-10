@@ -43,4 +43,5 @@ public:
 
 	CWnd *m_pParent;
 	CString m_csStrSelectItem;
+	virtual BOOL PreTranslateMessage(MSG* pMsg);
 };

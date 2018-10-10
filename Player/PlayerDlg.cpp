@@ -76,6 +76,8 @@ CPlayerDlg::CPlayerDlg(CWnd* pParent /*=NULL*/)
 	, m_d64Exposure(0)
 	, m_d64Gain(0.0)
 	, m_d64FPS(0.0)
+	, m_u32Width(0)
+	, m_u32Height(0)
 {
 	memset(&m_stDevList, 0, sizeof(MV_CC_DEVICE_INFO_LIST));
 	m_hIcon = AfxGetApp()->LoadIcon(IDR_MAINFRAME);
@@ -97,6 +99,12 @@ void CPlayerDlg::DoDataExchange(CDataExchange* pDX)
 	DDX_Text(pDX, IDC_EDIT_Exposure, m_d64Exposure);
 	DDX_Text(pDX, IDC_EDIT_Gain, m_d64Gain);
 	DDX_Text(pDX, IDC_EDIT_FPS, m_d64FPS);
+	DDX_Control(pDX, IDC_EDIT_Width, m_csEditWidth);
+	DDX_Control(pDX, IDC_EDIT_Height, m_csEditHeight);
+	DDX_Text(pDX, IDC_EDIT_Width, m_u32Width);
+	DDV_MinMaxUInt(pDX, m_u32Width, 0, 672);
+	DDX_Text(pDX, IDC_EDIT_Height, m_u32Height);
+	DDV_MinMaxUInt(pDX, m_u32Height, 0, 512);
 }
 
 BEGIN_MESSAGE_MAP(CPlayerDlg, CDialogEx)
@@ -225,8 +233,8 @@ BOOL CPlayerDlg::OnInitDialog()
 	}
 
 
-	//SetConfig();
 	GetConfig();
+	//SetConfig();
 
 	SetTimer(1, 1000, NULL);
 
@@ -908,6 +916,9 @@ void CPlayerDlg::OnBnClickedBtnDeviceopenclose()
 			SetWidth(&m_u32BackupWidth);
 			SetHeight(&m_u32BackupHeight);
 
+			m_u32Width = m_u32BackupWidth;
+			m_u32Height = m_u32BackupHeight;
+
 			OnBnClickedBtnDeviceparamget();
 
 			m_csCBDevList.GetLBText(m_csCBDevList.GetCurSel(), m_csLinkDevName);
@@ -1105,6 +1116,45 @@ INT CPlayerDlg::SetConfig(void)
 		);
 	}
 
+	csStrTmp.Format(L"%.06f", m_d64BackupExposure);
+	WritePrivateProfileString(
+		_T("CameraSet")
+		, _T("Exposure")
+		, csStrTmp.GetString()
+		, wcFileName
+	);
+
+	csStrTmp.Format(L"%.06f", m_d64BackupGain);
+	WritePrivateProfileString(
+		_T("CameraSet")
+		, _T("Gain")
+		, csStrTmp.GetString()
+		, wcFileName
+	);
+
+	csStrTmp.Format(L"%.06f", m_d64BackupFPS);
+	WritePrivateProfileString(
+		_T("CameraSet")
+		, _T("FrameRate")
+		, csStrTmp.GetString()
+		, wcFileName
+	);
+
+	csStrTmp.Format(L"%d", m_u32BackupWidth);
+	WritePrivateProfileString(
+		_T("CameraSet")
+		, _T("Width")
+		, csStrTmp.GetString()
+		, wcFileName
+	);
+
+	csStrTmp.Format(L"%d", m_u32BackupHeight);
+	WritePrivateProfileString(
+		_T("CameraSet")
+		, _T("Height")
+		, csStrTmp.GetString()
+		, wcFileName
+	);
 	return 0;
 }
 INT CPlayerDlg::GetConfig(void)
@@ -1321,17 +1371,19 @@ void CPlayerDlg::DevicePlayWidgetEnable(UINT32 u32Level, BOOL boIsEnable/* = TRU
 		IDC_EDIT_Exposure,
 		IDC_EDIT_Gain,
 		IDC_EDIT_FPS,
+		IDC_EDIT_Width,
+		IDC_EDIT_Height,
 
 		IDC_BTN_DeviceOpenClose,
 	};
 	UINT32 u32Count = 0;
 	if (u32Level == 0)
 	{
-		u32Count = 6;
+		u32Count = 8;
 	}
 	else
 	{
-		u32Count = 7;
+		u32Count = 9;
 	}
 	for (UINT32 i = 0; i < u32Count; i++)
 	{
@@ -1776,6 +1828,18 @@ void CPlayerDlg::OnBnClickedBtnDeviceparamset()
 		ShowErrorMsg(TEXT("Set Parameter Succeed"), nRet);
 	}
 
+	if (m_u32Height > 512 || m_u32Width > 672)
+	{
+		MessageBox(L"分辨率超出范围", L"错误", MB_ICONERROR);
+	}
+
+	m_u32BackupHeight = m_u32Height;
+	m_u32BackupWidth = m_u32Width;
+	m_d64BackupExposure = m_d64Exposure;
+	m_d64BackupGain = m_d64Gain;
+	m_d64BackupFPS = m_d64FPS;
+
+	SetConfig();
 }
 
 
@@ -1935,4 +1999,13 @@ void CPlayerDlg::RegAutoRun()
 	//	lRet = RegDeleteValue(hKey, tcFileName);
 	//	RegCloseKey(hKey);
 	//}
+}
+
+
+BOOL CPlayerDlg::PreTranslateMessage(MSG* pMsg)
+{
+	// TODO: 在此添加专用代码和/或调用基类
+	if (pMsg->message == WM_KEYDOWN && pMsg->wParam == VK_ESCAPE)
+		return TRUE;
+	return CDialogEx::PreTranslateMessage(pMsg);
 }

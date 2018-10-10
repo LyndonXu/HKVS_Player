@@ -688,6 +688,7 @@ int32_t  CPlayCtrl::SendFileDataToRender(CLocalPlayIndexIter iter)
 		if (u32Length != dwReadLen)
 		{
 			free(pData);
+			return -1;
 		}
 		SendShareData(pData, u32Length);
 		free(pData);

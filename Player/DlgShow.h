@@ -28,6 +28,8 @@ public:
 	afx_msg void OnSize(UINT nType, int cx, int cy);
 	afx_msg void OnBnClickedBtnSet();
 	afx_msg BOOL OnToolTipNotify(UINT id, NMHDR *pNMHDR, LRESULT *pResult);
+	afx_msg void OnSysCommand(UINT nID, LPARAM lParam);
+	afx_msg void OnNcLButtonDblClk(UINT nHitTest, CPoint point);
 
 private:
 	CDialogEx *m_pDlgPlayCtrl;

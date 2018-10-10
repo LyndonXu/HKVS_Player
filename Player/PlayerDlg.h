@@ -86,6 +86,9 @@ private:
 	CEdit m_csEditExposure;
 	CEdit m_csEditGain;
 	CEdit m_csEditFPS;
+	CEdit m_csEditWidth;
+	CEdit m_csEditHeight;
+
 	double m_d64Exposure;
 	double m_d64Gain;
 	double m_d64FPS;
@@ -151,6 +154,9 @@ public:
 
 	void RegAutoRun();
 
+	UINT m_u32Width;
+	UINT m_u32Height;
+	virtual BOOL PreTranslateMessage(MSG* pMsg);
 };
 
 #define PLAYCTRL_MSG		(WM_USER + 200)

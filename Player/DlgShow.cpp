@@ -46,6 +46,8 @@ BEGIN_MESSAGE_MAP(CDlgShow, CDialogEx)
 	ON_WM_SIZE()
 	ON_BN_CLICKED(IDC_BTN_Set, &CDlgShow::OnBnClickedBtnSet)
 	ON_NOTIFY_EX_RANGE(TTN_NEEDTEXT, 0, 0xFFFF, &CDlgShow::OnToolTipNotify)
+	ON_WM_SYSCOMMAND()
+	ON_WM_NCLBUTTONDBLCLK()
 END_MESSAGE_MAP()
 
 
@@ -237,6 +239,24 @@ BOOL CDlgShow::OnToolTipNotify(UINT id, NMHDR *pNMHDR, LRESULT *pResult)
 	return   TRUE;
 }
 
+void CDlgShow::OnSysCommand(UINT nID, LPARAM lParam)
+{
+	// TODO: 在此添加消息处理程序代码和/或调用默认值
+	if (nID == SC_MOVE || nID == 0xF012)
+	{
+		return;
+	}
+	CDialogEx::OnSysCommand(nID, lParam);
+}
+
+
+void CDlgShow::OnNcLButtonDblClk(UINT nHitTest, CPoint point)
+{
+	// TODO: 在此添加消息处理程序代码和/或调用默认值
+
+	//CDialogEx::OnNcLButtonDblClk(nHitTest, point);
+}
+
 
 BOOL CDlgShow::PreTranslateMessage(MSG* pMsg)
 {
@@ -245,5 +265,9 @@ BOOL CDlgShow::PreTranslateMessage(MSG* pMsg)
 	{
 		m_csToolTips.RelayEvent(pMsg);
 	}
+	if (pMsg->message == WM_KEYDOWN && pMsg->wParam == VK_ESCAPE)
+		return TRUE;
+
 	return CDialogEx::PreTranslateMessage(pMsg);
 }
+
