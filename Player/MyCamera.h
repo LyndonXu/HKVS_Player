@@ -70,6 +70,24 @@ public:
     int     GetStringValue(IN const char* strKey, IN OUT char* strValue, IN unsigned int nSize);
     int     SetStringValue(IN const char* strKey, IN const char * strValue);
 
+
+	int		SetWidth(IN unsigned int width)
+	{
+		if (m_hDevHandle != NULL)
+		{
+			return MV_CC_SetWidth(m_hDevHandle, width);
+		}
+		return -1;
+	}
+
+	int		SetHeight(IN unsigned int height)
+	{
+		if (m_hDevHandle != NULL)
+		{
+			return MV_CC_SetHeight(m_hDevHandle, height);
+		}
+		return -1;
+	}
     // ch:执行一次Command型命令，如 UserSetSave，详细内容参考SDK安装目录下的 MvCameraNode.xlsx 文件
     // en:Execute Command once, such as UserSetSave, for details please refer to MvCameraNode.xlsx file under SDK installation directory
     int     CommandExecute(IN const char* strKey);

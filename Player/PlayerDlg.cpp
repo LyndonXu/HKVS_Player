@@ -904,6 +904,7 @@ void CPlayerDlg::OnBnClickedBtnDeviceopenclose()
 	{
 		if (OpenDevice() == MV_OK)
 		{
+			INT ret = 0;
 			GetDlgItem(IDC_BTN_DeviceOpenClose)->SetWindowText(L"关闭");
 
 			LocalPlayWidgetEnable(1, FALSE);
@@ -913,8 +914,10 @@ void CPlayerDlg::OnBnClickedBtnDeviceopenclose()
 			SetExposureTime(&m_d64BackupExposure);
 			SetGain(&m_d64BackupGain);
 			SetFrameRate(&m_d64BackupFPS);
-			SetWidth(&m_u32BackupWidth);
-			SetHeight(&m_u32BackupHeight);
+			ret = SetWidth(&m_u32BackupWidth);
+			PRINT("width: %x\n", ret);
+			ret = SetHeight(&m_u32BackupHeight);
+			PRINT("height: %x\n", ret);
 
 			m_u32Width = m_u32BackupWidth;
 			m_u32Height = m_u32BackupHeight;
@@ -929,16 +932,12 @@ void CPlayerDlg::OnBnClickedBtnDeviceopenclose()
 	}
 	else
 	{
+		StopCapture();
 		GetDlgItem(IDC_BTN_DeviceCapture)->GetWindowText(csStr);
+
 		if (csStr == L"停止录制")
 		{
-			if (m_pMyCamera != NULL)
-			{
-				m_pMyCamera->StopGrabbing();
-				m_csPlayCtrl.StopRender();
-				m_csPlayCtrl.StopSave();
-			}
-			GetDlgItem(IDC_BTN_DeviceCapture)->SetWindowText(L"开始录制");
+			OnBnClickedBtnDevicecapture();
 		}
 
 		CloseDevice();
@@ -1746,7 +1745,7 @@ INT CPlayerDlg::SetWidth(UINT32 *pData/* = NULL*/)
 	{
 		u32Data = *pData;
 	}
-	return m_pMyCamera->SetIntValue("WidthMax", u32Data);
+	return m_pMyCamera->SetWidth(u32Data);
 
 }
 INT CPlayerDlg::GetHeight(void)
@@ -1761,7 +1760,7 @@ INT CPlayerDlg::SetHeight(UINT32 *pData/* = NULL*/)
 	{
 		u32Data = *pData;
 	}
-	return m_pMyCamera->SetIntValue("HeightMax", u32Data);
+	return m_pMyCamera->SetHeight(u32Data);
 }
 
 
