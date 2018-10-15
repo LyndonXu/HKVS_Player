@@ -53,10 +53,9 @@ END_MESSAGE_MAP()
 
 // CDlgShow 消息处理程序
 
-
-void CDlgShow::OnSize(UINT nType, int cx, int cy)
+void CDlgShow::RebuildCtrls(void)
 {
-	CDialogEx::OnSize(nType, cx, cy);
+#define CTRL_HEIGHT		25
 	CWnd *pMovie = GetDlgItem(IDC_STATIC_BigMovie);
 	if (pMovie != NULL && pMovie->GetSafeHwnd() != NULL)
 	{
@@ -64,8 +63,8 @@ void CDlgShow::OnSize(UINT nType, int cx, int cy)
 		GetWindowRect(&csClient);
 		csClient.left += 8;
 		csClient.top += 32;
-		csClient.right -= (8 + 80);
-		csClient.bottom -= (8 + 20);
+		csClient.right -= (8);
+		csClient.bottom -= (8 + CTRL_HEIGHT);
 
 		ScreenToClient(&csClient);
 
@@ -78,11 +77,11 @@ void CDlgShow::OnSize(UINT nType, int cx, int cy)
 	{
 		CRect csClient;
 		GetWindowRect(&csClient);
-		csClient.top += 32;
-		csClient.right -= 8;
+		csClient.right -= (8 + 80);
+		csClient.bottom -= 8;
 
-		csClient.left = csClient.right - 80;
-		csClient.bottom = csClient.top + 30;
+		csClient.left = csClient.right - 60;
+		csClient.top = csClient.bottom - CTRL_HEIGHT;
 
 		ScreenToClient(&csClient);
 
@@ -97,10 +96,10 @@ void CDlgShow::OnSize(UINT nType, int cx, int cy)
 		GetWindowRect(&csClient);
 
 		csClient.right -= 8;
-		csClient.bottom -= (8 + 20);
+		csClient.bottom -= 8;
 
-		csClient.left = csClient.right - 80;
-		csClient.top = csClient.bottom - 30;
+		csClient.left = csClient.right - 60;
+		csClient.top = csClient.bottom - CTRL_HEIGHT;
 
 		ScreenToClient(&csClient);
 
@@ -113,11 +112,18 @@ void CDlgShow::OnSize(UINT nType, int cx, int cy)
 	{
 		CRect csRect;
 		GetClientRect(csRect);
-		m_csStatusBar.MoveWindow(0, csRect.bottom - 20, csRect.right, 20);
+		csRect.right -= 160;
+		m_csStatusBar.MoveWindow(0, csRect.bottom - CTRL_HEIGHT, csRect.right, CTRL_HEIGHT);
 	}
 
+}
 
+void CDlgShow::OnSize(UINT nType, int cx, int cy)
+{
+	CDialogEx::OnSize(nType, cx, cy);
 	// TODO: 在此处添加消息处理程序代码
+
+	RebuildCtrls();
 }
 
 
@@ -204,6 +210,7 @@ BOOL CDlgShow::OnInitDialog()
 		m_csToolTips.AddTool(this, L"天津市北洋天泽智能机器人科技有限公司", &stRect, IDD_DLG_Show);
 	}
 #endif
+	RebuildCtrls();
 	return TRUE;  // return TRUE unless you set the focus to a control
 				  // 异常: OCX 属性页应返回 FALSE
 }

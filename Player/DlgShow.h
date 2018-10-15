@@ -43,4 +43,6 @@ public:
 		return m_csStatusBar.SetPaneText(nIndex, lpszNewText, bUpdate);
 	}
 
+	void RebuildCtrls(void);
+
 };
